@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: accesoya-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/accesoya_db
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+    show-sql: false
+
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 500
+        order_inserts: true
+        order_updates: true
+
+accesoya:
+  import:
+    renipress:
+      enabled: false
+
+    openstreetmap:
+      enabled: true
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:AccesoYaDevelopmentSecretKey12345678901234567890}
+    expiration-ms: 86400000
+
+server:
+  port: 8080
