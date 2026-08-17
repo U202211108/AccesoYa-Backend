@@ -121,4 +121,11 @@ public class Place {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
     private User owner;
+
+    // =====================================================
+    // INFORMACIÓN FLM / NOC
+    // =====================================================
+
+    @OneToOne(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private FlmNocData flmNocData;
 }

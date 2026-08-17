@@ -29,6 +29,9 @@ accesoya:
     openstreetmap:
       enabled: true
 
+    flm-noc:
+      enabled: true
+
 security:
   jwt:
     secret: ${JWT_SECRET:AccesoYaDevelopmentSecretKey12345678901234567890}

@@ -17,47 +17,48 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PlaceRepository
-                extends JpaRepository<Place, UUID> {
+    extends JpaRepository<Place, UUID> {
 
-        Optional<Place> findByExternalIdAndSource(
-                        String externalId,
-                        PlaceSource source);
+  Optional<Place> findByExternalIdAndSource(
+      String externalId,
+      PlaceSource source);
 
-        Page<Place> findByNameContainingIgnoreCase(
-                        String name,
-                        Pageable pageable);
+  Page<Place> findByNameContainingIgnoreCase(
+      String name,
+      Pageable pageable);
 
-        Page<Place> findByType(
-                        PlaceType type,
-                        Pageable pageable);
+  Page<Place> findByType(
+      PlaceType type,
+      Pageable pageable);
 
-        Optional<Place> findByIdAndOwnerId(
-                        UUID placeId,
-                        UUID ownerId);
+  Optional<Place> findByIdAndOwnerId(
+      UUID placeId,
+      UUID ownerId);
 
-        boolean existsByOwnerId(
-                        UUID ownerId);
+  boolean existsByOwnerId(
+      UUID ownerId);
 
-        List<Place> findByOwnerId(
-                        UUID ownerId);
+  List<Place> findByOwnerId(
+      UUID ownerId);
 
-        Page<Place> findByNameContainingIgnoreCaseAndOwnerIsNullAndStatus(
-                        String name,
-                        PlaceStatus status,
-                        Pageable pageable);
+  Page<Place> findByNameContainingIgnoreCaseAndOwnerIsNullAndStatus(
+      String name,
+      PlaceStatus status,
+      Pageable pageable);
 
-        @Query("""
-                        SELECT p
-                        FROM Place p
-                        WHERE p.latitude BETWEEN :minLatitude AND :maxLatitude
-                          AND p.longitude BETWEEN :minLongitude AND :maxLongitude
-                          AND p.status =
-                              accesoya_backend.places.domain.model.PlaceStatus.ACTIVE
-                        """)
-        List<Place> findPlacesInBoundingBox(
-                        @Param("minLatitude") Double minLatitude,
-                        @Param("maxLatitude") Double maxLatitude,
-                        @Param("minLongitude") Double minLongitude,
-                        @Param("maxLongitude") Double maxLongitude,
-                        Pageable pageable);
+  @Query("""
+      SELECT p
+      FROM Place p
+      LEFT JOIN FETCH p.flmNocData
+      WHERE p.latitude BETWEEN :minLatitude AND :maxLatitude
+        AND p.longitude BETWEEN :minLongitude AND :maxLongitude
+        AND p.status =
+            accesoya_backend.places.domain.model.PlaceStatus.ACTIVE
+      """)
+  List<Place> findPlacesInBoundingBox(
+      @Param("minLatitude") Double minLatitude,
+      @Param("maxLatitude") Double maxLatitude,
+      @Param("minLongitude") Double minLongitude,
+      @Param("maxLongitude") Double maxLongitude,
+      Pageable pageable);
 }

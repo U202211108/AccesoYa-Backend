@@ -5,5 +5,6 @@ public enum PlaceSource {
     RENIPRESS,
     GOOGLE_PLACES,
     OPENSTREETMAP,
-    ACCESOYA
+    ACCESOYA,
+    FLM_NOC
 }

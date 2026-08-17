@@ -17,5 +17,6 @@ public enum PlaceType {
     CULTURAL,
     SPORTS,
     RELIGIOUS,
+    TELECOMMUNICATION_SITE,
     OTHER
 }

@@ -267,9 +267,7 @@ public class PlaceService {
 
                 int limit = calculateMapLimit(zoom);
 
-                Pageable pageable = PageRequest.of(
-                                0,
-                                limit);
+                Pageable pageable = PageRequest.of(0, limit);
 
                 List<Place> places = placeRepository.findPlacesInBoundingBox(
                                 minLatitude,
@@ -279,35 +277,7 @@ public class PlaceService {
                                 pageable);
 
                 return places.stream()
-                                .map(place -> new PlaceMapResponse(
-
-                                                place.getId(),
-
-                                                place.getName(),
-
-                                                place.getLatitude(),
-
-                                                place.getLongitude(),
-
-                                                place.getType(),
-
-                                                place.getStatus(),
-
-                                                place.getSource(),
-
-                                                place.getAddress(),
-
-                                                place.getPhone(),
-
-                                                place.getOpeningHours(),
-
-                                                place.getCategory(),
-
-                                                place.getDescription(),
-
-                                                place.getEstablishmentType()
-
-                                ))
+                                .map(PlaceMapResponse::from)
                                 .toList();
         }
 
@@ -906,35 +876,7 @@ public class PlaceService {
                 // =================================================
 
                 return places.stream()
-                                .map(place -> new PlaceMapResponse(
-
-                                                place.getId(),
-
-                                                place.getName(),
-
-                                                place.getLatitude(),
-
-                                                place.getLongitude(),
-
-                                                place.getType(),
-
-                                                place.getStatus(),
-
-                                                place.getSource(),
-
-                                                place.getAddress(),
-
-                                                place.getPhone(),
-
-                                                place.getOpeningHours(),
-
-                                                place.getCategory(),
-
-                                                place.getDescription(),
-
-                                                place.getEstablishmentType()
-
-                                ))
+                                .map(PlaceMapResponse::from)
                                 .toList();
         }
 }
