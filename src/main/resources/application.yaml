@@ -21,6 +21,15 @@ spring:
         order_inserts: true
         order_updates: true
 
+  # =====================================================
+  # MULTIPART / ARCHIVOS
+  # =====================================================
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
 accesoya:
   import:
     renipress:

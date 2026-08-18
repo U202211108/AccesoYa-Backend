@@ -27,6 +27,7 @@ import accesoya_backend.iam.domain.model.User;
 import org.springframework.security.core.Authentication;
 import accesoya_backend.iam.domain.model.Role;
 import org.springframework.security.access.AccessDeniedException;
+import accesoya_backend.places.application.dto.FlmNocSiteResponse;
 import java.util.List;
 import java.util.UUID;
 
@@ -877,6 +878,20 @@ public class PlaceService {
 
                 return places.stream()
                                 .map(PlaceMapResponse::from)
+                                .toList();
+        }
+
+        // =====================================================
+        // SITIOS FLM / NOC
+        // =====================================================
+
+        @Transactional(readOnly = true)
+        public List<FlmNocSiteResponse> getFlmNocSites() {
+
+                return placeRepository
+                                .findByFlmNocDataIsNotNull()
+                                .stream()
+                                .map(FlmNocSiteResponse::from)
                                 .toList();
         }
 

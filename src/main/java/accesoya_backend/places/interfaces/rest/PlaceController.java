@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import accesoya_backend.places.application.dto.FlmNocSiteResponse;
 
 import jakarta.validation.Valid;
 
@@ -216,6 +217,26 @@ public class PlaceController {
                         Authentication authentication) {
 
                 List<PlaceMapResponse> response = placeService.getMyPlaces(authentication);
+
+                return ResponseEntity.ok(response);
+        }
+
+        // =====================================================
+        // SITIOS FLM / NOC
+        // =====================================================
+
+        @Operation(summary = "Obtener sitios FLM/NOC", description = """
+                        Obtiene los sitios que tienen información
+                        FLM/NOC registrada en el sistema.
+                        """)
+        @ApiResponses({
+                        @ApiResponse(responseCode = "200", description = "Sitios FLM/NOC obtenidos correctamente"),
+                        @ApiResponse(responseCode = "401", description = "No autenticado")
+        })
+        @GetMapping("/flm-noc")
+        public ResponseEntity<List<FlmNocSiteResponse>> getFlmNocSites() {
+
+                List<FlmNocSiteResponse> response = placeService.getFlmNocSites();
 
                 return ResponseEntity.ok(response);
         }

@@ -51,6 +51,12 @@ public class FlmNocData {
     @Column(name = "zonal", length = 100)
     private String zonal;
 
+    @Column(name = "tipo_estacion", length = 200)
+    private String tipoEstacion;
+
+    @Column(name = "tecnologia", length = 200)
+    private String tecnologia;
+
     // =====================================================
     // TORRE
     // =====================================================

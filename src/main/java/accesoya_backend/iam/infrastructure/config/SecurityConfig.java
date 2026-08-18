@@ -72,7 +72,13 @@ public class SecurityConfig {
                                                 // ==============================
                                                 .requestMatchers(
                                                                 "/api/auth/register",
-                                                                "/api/auth/login")
+                                                                "/api/auth/login",
+
+                                                                // ==============================
+                                                                // MAPA PÚBLICO
+                                                                // ==============================
+                                                                "/api/places/map",
+                                                                "/api/places/map/search")
                                                 .permitAll()
 
                                                 // ==============================

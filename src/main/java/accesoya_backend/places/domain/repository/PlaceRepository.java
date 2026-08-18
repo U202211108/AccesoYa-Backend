@@ -7,7 +7,6 @@ import accesoya_backend.places.domain.model.PlaceType;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +17,10 @@ import java.util.UUID;
 
 public interface PlaceRepository
         extends JpaRepository<Place, UUID> {
+
+    // =====================================================
+    // BÚSQUEDA GENERAL
+    // =====================================================
 
     Optional<Place> findByExternalIdAndSource(
             String externalId,
@@ -30,6 +33,10 @@ public interface PlaceRepository
     Page<Place> findByType(
             PlaceType type,
             Pageable pageable);
+
+    // =====================================================
+    // PROPIETARIO
+    // =====================================================
 
     Optional<Place> findByIdAndOwnerId(
             UUID placeId,
@@ -45,6 +52,16 @@ public interface PlaceRepository
             String name,
             PlaceStatus status,
             Pageable pageable);
+
+    // =====================================================
+    // SITIOS FLM / NOC
+    // =====================================================
+
+    List<Place> findByFlmNocDataIsNotNull();
+
+    // =====================================================
+    // MAPA
+    // =====================================================
 
     @Query("""
             SELECT p
@@ -62,6 +79,10 @@ public interface PlaceRepository
             @Param("maxLongitude") Double maxLongitude,
             Pageable pageable);
 
+    // =====================================================
+    // BÚSQUEDA GLOBAL DEL MAPA
+    // =====================================================
+
     @Query("""
             SELECT p
             FROM Place p
@@ -69,41 +90,53 @@ public interface PlaceRepository
             WHERE p.status =
                 accesoya_backend.places.domain.model.PlaceStatus.ACTIVE
               AND (
-                    LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%'))
-                 OR LOWER(f.nombreEnCal) LIKE LOWER(CONCAT('%', :query, '%'))
-                 OR LOWER(f.nombreControlCentral) LIKE LOWER(CONCAT('%', :query, '%'))
+                    LOWER(p.name)
+                        LIKE LOWER(CONCAT('%', :query, '%'))
+
+                 OR LOWER(f.nombreEnCal)
+                        LIKE LOWER(CONCAT('%', :query, '%'))
+
+                 OR LOWER(f.nombreControlCentral)
+                        LIKE LOWER(CONCAT('%', :query, '%'))
               )
             ORDER BY
                 CASE
                     WHEN LOWER(p.name) = LOWER(:query)
                         THEN 1
 
-                    WHEN LOWER(p.name) LIKE LOWER(CONCAT(:query, '%'))
+                    WHEN LOWER(p.name)
+                        LIKE LOWER(CONCAT(:query, '%'))
                         THEN 2
 
-                    WHEN LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                    WHEN LOWER(p.name)
+                        LIKE LOWER(CONCAT('%', :query, '%'))
                         THEN 3
 
                     WHEN LOWER(f.nombreEnCal) = LOWER(:query)
                         THEN 4
 
-                    WHEN LOWER(f.nombreEnCal) LIKE LOWER(CONCAT(:query, '%'))
+                    WHEN LOWER(f.nombreEnCal)
+                        LIKE LOWER(CONCAT(:query, '%'))
                         THEN 5
 
-                    WHEN LOWER(f.nombreEnCal) LIKE LOWER(CONCAT('%', :query, '%'))
+                    WHEN LOWER(f.nombreEnCal)
+                        LIKE LOWER(CONCAT('%', :query, '%'))
                         THEN 6
 
                     WHEN LOWER(f.nombreControlCentral) = LOWER(:query)
                         THEN 7
 
-                    WHEN LOWER(f.nombreControlCentral) LIKE LOWER(CONCAT(:query, '%'))
+                    WHEN LOWER(f.nombreControlCentral)
+                        LIKE LOWER(CONCAT(:query, '%'))
                         THEN 8
 
-                    WHEN LOWER(f.nombreControlCentral) LIKE LOWER(CONCAT('%', :query, '%'))
+                    WHEN LOWER(f.nombreControlCentral)
+                        LIKE LOWER(CONCAT('%', :query, '%'))
                         THEN 9
 
                     ELSE 10
                 END,
+
                 p.name ASC
             """)
     List<Place> searchPlacesForMap(
