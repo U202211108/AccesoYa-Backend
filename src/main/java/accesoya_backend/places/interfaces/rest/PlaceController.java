@@ -307,4 +307,25 @@ public class PlaceController {
                                 .status(HttpStatus.CREATED)
                                 .body(response);
         }
+
+        // =====================================================
+        // BÚSQUEDA GLOBAL PARA EL MAPA
+        // =====================================================
+
+        @Operation(summary = "Buscar lugares globalmente para el mapa", description = """
+                        Busca lugares independientemente
+                        de la posición actual del mapa.
+                        Para FLM/NOC considera:
+                        NOMBRE_DEL_LOCAL,
+                        NOMBRE_EN_CAL y
+                        NOMBRE_CONTROL_CENTRAL.
+                        """)
+        @GetMapping("/map/search")
+        public ResponseEntity<List<PlaceMapResponse>> searchPlacesForMap(
+                        @RequestParam String query) {
+
+                List<PlaceMapResponse> response = placeService.searchPlacesForMap(query);
+
+                return ResponseEntity.ok(response);
+        }
 }

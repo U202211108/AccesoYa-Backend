@@ -879,4 +879,27 @@ public class PlaceService {
                                 .map(PlaceMapResponse::from)
                                 .toList();
         }
+
+        @Transactional(readOnly = true)
+        public List<PlaceMapResponse> searchPlacesForMap(
+                        String query) {
+
+                if (query == null || query.trim().isBlank()) {
+                        return List.of();
+                }
+
+                String cleanQuery = query.trim();
+
+                Pageable pageable = PageRequest.of(
+                                0,
+                                10);
+
+                return placeRepository
+                                .searchPlacesForMap(
+                                                cleanQuery,
+                                                pageable)
+                                .stream()
+                                .map(PlaceMapResponse::from)
+                                .toList();
+        }
 }
