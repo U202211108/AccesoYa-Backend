@@ -30,6 +30,10 @@ spring:
       max-file-size: 20MB
       max-request-size: 25MB
 
+# =====================================================
+# ACCESOYA
+# =====================================================
+
 accesoya:
   import:
     renipress:
@@ -41,10 +45,25 @@ accesoya:
     flm-noc:
       enabled: true
 
+# =====================================================
+# LIBREOFFICE
+# =====================================================
+
+libreoffice:
+  executable: 'C:\Program Files\LibreOffice\program\soffice.exe'
+
+# =====================================================
+# SEGURIDAD JWT
+# =====================================================
+
 security:
   jwt:
     secret: ${JWT_SECRET:AccesoYaDevelopmentSecretKey12345678901234567890}
     expiration-ms: 86400000
+
+# =====================================================
+# SERVIDOR
+# =====================================================
 
 server:
   port: 8080

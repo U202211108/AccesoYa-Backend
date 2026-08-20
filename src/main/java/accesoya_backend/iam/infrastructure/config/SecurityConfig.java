@@ -13,9 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-
 import org.springframework.security.config.http.SessionCreationPolicy;
-
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -37,74 +35,104 @@ public class SecurityConfig {
 
                 http
 
-                                // ==============================
+                                // =====================================================
                                 // CORS
-                                // ==============================
+                                // =====================================================
+
                                 .cors(cors -> cors.configurationSource(
                                                 corsConfigurationSource()))
 
-                                // ==============================
+                                // =====================================================
                                 // CSRF
-                                // ==============================
+                                // =====================================================
+
                                 .csrf(csrf -> csrf.disable())
 
-                                // ==============================
+                                // =====================================================
                                 // SESIONES
-                                // ==============================
+                                // =====================================================
+
                                 .sessionManagement(session -> session.sessionCreationPolicy(
                                                 SessionCreationPolicy.STATELESS))
 
-                                // ==============================
+                                // =====================================================
                                 // AUTORIZACIÓN
-                                // ==============================
+                                // =====================================================
+
                                 .authorizeHttpRequests(auth -> auth
 
-                                                // ==============================
+                                                // -------------------------------------------------
                                                 // CORS PREFLIGHT
-                                                // ==============================
+                                                // -------------------------------------------------
+
                                                 .requestMatchers(
                                                                 HttpMethod.OPTIONS,
                                                                 "/**")
                                                 .permitAll()
 
-                                                // ==============================
-                                                // PÚBLICOS
-                                                // ==============================
+                                                // -------------------------------------------------
+                                                // AUTENTICACIÓN
+                                                // -------------------------------------------------
+
                                                 .requestMatchers(
                                                                 "/api/auth/register",
-                                                                "/api/auth/login",
+                                                                "/api/auth/login")
+                                                .permitAll()
 
-                                                                // ==============================
-                                                                // MAPA PÚBLICO
-                                                                // ==============================
+                                                // -------------------------------------------------
+                                                // MAPA PÚBLICO
+                                                // -------------------------------------------------
+
+                                                .requestMatchers(
                                                                 "/api/places/map",
                                                                 "/api/places/map/search")
                                                 .permitAll()
 
-                                                // ==============================
+                                                // -------------------------------------------------
                                                 // SWAGGER
-                                                // ==============================
+                                                // -------------------------------------------------
+
                                                 .requestMatchers(
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
                                                                 "/v3/api-docs/**")
                                                 .permitAll()
 
-                                                // ==============================
-                                                // API PROTEGIDA
-                                                // ==============================
-                                                .requestMatchers("/api/**")
+                                                // -------------------------------------------------
+                                                // DASHBOARD
+                                                // -------------------------------------------------
+
+                                                .requestMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/dashboard")
                                                 .authenticated()
 
-                                                // ==============================
-                                                // RESTO
-                                                // ==============================
-                                                .anyRequest()
-                                                .denyAll())
+                                                // -------------------------------------------------
+                                                // NOTIFICACIONES
+                                                // -------------------------------------------------
 
-                                // ==============================
+                                                .requestMatchers(
+                                                                "/api/notifications/**")
+                                                .authenticated()
+
+                                                // -------------------------------------------------
+                                                // RESTO DE LA API
+                                                // -------------------------------------------------
+
+                                                .requestMatchers(
+                                                                "/api/**")
+                                                .authenticated()
+
+                                                // -------------------------------------------------
+                                                // RESTO
+                                                // -------------------------------------------------
+
+                                                .anyRequest().denyAll())
+
+                                // =====================================================
                                 // JWT FILTER
-                                // ==============================
+                                // =====================================================
+
                                 .addFilterBefore(
                                                 jwtAuthenticationFilter,
                                                 UsernamePasswordAuthenticationFilter.class);
@@ -112,9 +140,9 @@ public class SecurityConfig {
                 return http.build();
         }
 
-        // ==================================================
+        // =====================================================
         // CORS
-        // ==================================================
+        // =====================================================
 
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
@@ -122,7 +150,8 @@ public class SecurityConfig {
                 CorsConfiguration configuration = new CorsConfiguration();
 
                 configuration.setAllowedOrigins(
-                                List.of("http://localhost:4200"));
+                                List.of(
+                                                "http://localhost:4200"));
 
                 configuration.setAllowedMethods(
                                 List.of(
@@ -140,7 +169,8 @@ public class SecurityConfig {
                                                 "Accept"));
 
                 configuration.setExposedHeaders(
-                                List.of("Authorization"));
+                                List.of(
+                                                "Authorization"));
 
                 configuration.setAllowCredentials(true);
 

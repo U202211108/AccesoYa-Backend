@@ -9,6 +9,7 @@ import accesoya_backend.places.domain.repository.PlaceRepository;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -16,292 +17,773 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
 public class PlanDocumentService {
 
-    private final PlanDocumentRepository planDocumentRepository;
+        private final PlanDocumentRepository planDocumentRepository;
 
-    private final PlaceRepository placeRepository;
+        private final PlaceRepository placeRepository;
 
-    // =====================================================
-    // CONFIGURACIÓN
-    // =====================================================
+        // =====================================================
+        // CONFIGURACIÓN LIBREOFFICE
+        // =====================================================
 
-    private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
+        @Value("${libreoffice.executable}")
+        private String libreOfficeExecutable;
 
-    private static final List<String> ALLOWED_CONTENT_TYPES = List.of(
-            "application/pdf",
-            "image/png",
-            "image/jpeg");
+        // =====================================================
+        // CONFIGURACIÓN DE ARCHIVOS
+        // =====================================================
 
-    // =====================================================
-    // OBTENER PLANOS DE UN SITIO
-    // =====================================================
+        private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
 
-    @Transactional(readOnly = true)
-    public List<PlanDocumentResponse> getPlans(
-            UUID placeId) {
+        private static final List<String> ALLOWED_CONTENT_TYPES = List.of(
 
-        validatePlaceExists(placeId);
+                        // =================================================
+                        // PDF
+                        // =================================================
 
-        return planDocumentRepository
-                .findByPlaceIdOrderByUploadedAtDesc(placeId)
-                .stream()
-                .map(PlanDocumentResponse::from)
-                .toList();
-    }
+                        "application/pdf",
 
-    // =====================================================
-    // SUBIR PLANO
-    // =====================================================
+                        // =================================================
+                        // IMÁGENES
+                        // =================================================
 
-    @Transactional
-    public PlanDocumentResponse uploadPlan(
+                        "image/png",
+                        "image/jpeg",
 
-            UUID placeId,
+                        // =================================================
+                        // MICROSOFT WORD
+                        // =================================================
 
-            MultipartFile file,
+                        "application/msword",
 
-            Authentication authentication) {
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 
-        // -------------------------------------------------
-        // VALIDAR AUTENTICACIÓN
-        // -------------------------------------------------
+                        // =================================================
+                        // MICROSOFT EXCEL
+                        // =================================================
 
-        if (authentication == null ||
-                !authentication.isAuthenticated()) {
+                        "application/vnd.ms-excel",
 
-            throw new AccessDeniedException(
-                    "No se pudo identificar al usuario autenticado");
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        // =====================================================
+        // OBTENER PLANOS DE UN SITIO
+        // =====================================================
+
+        @Transactional(readOnly = true)
+        public List<PlanDocumentResponse> getPlans(
+                        UUID placeId) {
+
+                validatePlaceExists(placeId);
+
+                return planDocumentRepository
+                                .findByPlaceIdOrderByUploadedAtDesc(placeId)
+                                .stream()
+                                .map(PlanDocumentResponse::from)
+                                .toList();
         }
 
-        // -------------------------------------------------
-        // OBTENER USUARIO AUTENTICADO
-        // -------------------------------------------------
+        // =====================================================
+        // SUBIR PLANO / DOCUMENTO
+        // =====================================================
 
-        if (!(authentication.getPrincipal() instanceof User)) {
+        @Transactional
+        public PlanDocumentResponse uploadPlan(
 
-            throw new AccessDeniedException(
-                    "El usuario autenticado no es válido");
+                        UUID placeId,
+
+                        MultipartFile file,
+
+                        Authentication authentication) {
+
+                // -------------------------------------------------
+                // VALIDAR AUTENTICACIÓN
+                // -------------------------------------------------
+
+                if (authentication == null ||
+                                !authentication.isAuthenticated()) {
+
+                        throw new AccessDeniedException(
+                                        "No se pudo identificar al usuario autenticado");
+                }
+
+                // -------------------------------------------------
+                // OBTENER USUARIO AUTENTICADO
+                // -------------------------------------------------
+
+                if (!(authentication.getPrincipal() instanceof User)) {
+
+                        throw new AccessDeniedException(
+                                        "El usuario autenticado no es válido");
+                }
+
+                User authenticatedUser = (User) authentication.getPrincipal();
+
+                // -------------------------------------------------
+                // VALIDAR SITIO
+                // -------------------------------------------------
+
+                Place place = placeRepository
+                                .findById(placeId)
+                                .orElseThrow(
+                                                () -> new IllegalArgumentException(
+                                                                "No se encontró el sitio con id: "
+                                                                                + placeId));
+
+                // -------------------------------------------------
+                // VALIDAR ARCHIVO
+                // -------------------------------------------------
+
+                validateFile(file);
+
+                // -------------------------------------------------
+                // CREAR DOCUMENTO
+                // -------------------------------------------------
+
+                try {
+
+                        PlanDocument document = PlanDocument.builder()
+
+                                        .place(place)
+
+                                        .fileName(
+                                                        normalizeFileName(
+                                                                        file.getOriginalFilename()))
+
+                                        .contentType(
+                                                        file.getContentType())
+
+                                        .fileSize(
+                                                        file.getSize())
+
+                                        .fileData(
+                                                        file.getBytes())
+
+                                        .uploadedBy(
+                                                        authenticatedUser)
+
+                                        .build();
+
+                        // -------------------------------------------------
+                        // GUARDAR
+                        // -------------------------------------------------
+
+                        PlanDocument savedDocument = planDocumentRepository.save(
+                                        document);
+
+                        return PlanDocumentResponse.from(
+                                        savedDocument);
+
+                } catch (IOException exception) {
+
+                        throw new IllegalStateException(
+                                        "No se pudo leer el archivo",
+                                        exception);
+                }
         }
 
-        User authenticatedUser = (User) authentication.getPrincipal();
+        // =====================================================
+        // VALIDACIÓN DEL ARCHIVO
+        // =====================================================
 
-        // -------------------------------------------------
-        // VALIDAR SITIO
-        // -------------------------------------------------
+        private void validateFile(
+                        MultipartFile file) {
 
-        Place place = placeRepository
-                .findById(placeId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "No se encontró el sitio con id: "
-                                + placeId));
+                // -------------------------------------------------
+                // ARCHIVO OBLIGATORIO
+                // -------------------------------------------------
 
-        // -------------------------------------------------
-        // VALIDAR ARCHIVO
-        // -------------------------------------------------
+                if (file == null ||
+                                file.isEmpty()) {
 
-        validateFile(file);
+                        throw new IllegalArgumentException(
+                                        "El archivo es obligatorio");
+                }
 
-        // -------------------------------------------------
-        // CREAR DOCUMENTO
-        // -------------------------------------------------
+                // -------------------------------------------------
+                // TAMAÑO MÁXIMO
+                // -------------------------------------------------
 
-        try {
+                if (file.getSize() > MAX_FILE_SIZE) {
 
-            PlanDocument document = PlanDocument.builder()
+                        throw new IllegalArgumentException(
+                                        "El archivo supera el tamaño máximo permitido de 20 MB");
+                }
 
-                    .place(place)
+                // -------------------------------------------------
+                // TIPO MIME
+                // -------------------------------------------------
 
-                    .fileName(
-                            normalizeFileName(
-                                    file.getOriginalFilename()))
+                String contentType = file.getContentType();
 
-                    .contentType(
-                            file.getContentType())
+                if (contentType == null ||
+                                !ALLOWED_CONTENT_TYPES.contains(
+                                                contentType.toLowerCase())) {
 
-                    .fileSize(
-                            file.getSize())
-
-                    .fileData(
-                            file.getBytes())
-
-                    .uploadedBy(
-                            authenticatedUser)
-
-                    .build();
-
-            // -------------------------------------------------
-            // GUARDAR
-            // -------------------------------------------------
-
-            PlanDocument savedDocument = planDocumentRepository.save(
-                    document);
-
-            return PlanDocumentResponse.from(
-                    savedDocument);
-
-        } catch (IOException exception) {
-
-            throw new IllegalStateException(
-                    "No se pudo leer el archivo",
-                    exception);
-        }
-    }
-
-    // =====================================================
-    // VALIDACIÓN DEL ARCHIVO
-    // =====================================================
-
-    private void validateFile(
-            MultipartFile file) {
-
-        if (file == null ||
-                file.isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "El archivo es obligatorio");
+                        throw new IllegalArgumentException(
+                                        "Tipo de archivo no permitido. "
+                                                        + "Solo se permiten PDF, PNG, JPG, JPEG, "
+                                                        + "Word y Excel");
+                }
         }
 
-        if (file.getSize() > MAX_FILE_SIZE) {
+        // =====================================================
+        // NORMALIZAR NOMBRE
+        // =====================================================
 
-            throw new IllegalArgumentException(
-                    "El archivo supera el tamaño máximo permitido de 20 MB");
+        private String normalizeFileName(
+                        String fileName) {
+
+                if (fileName == null ||
+                                fileName.isBlank()) {
+
+                        return "plano";
+                }
+
+                String normalized = fileName.trim();
+
+                // -------------------------------------------------
+                // EVITAR NOMBRES EXCESIVAMENTE LARGOS
+                // -------------------------------------------------
+
+                if (normalized.length() > 255) {
+
+                        return normalized.substring(
+                                        0,
+                                        255);
+                }
+
+                return normalized;
         }
 
-        String contentType = file.getContentType();
+        // =====================================================
+        // VERIFICAR SITIO
+        // =====================================================
 
-        if (contentType == null ||
-                !ALLOWED_CONTENT_TYPES.contains(
-                        contentType.toLowerCase())) {
+        private void validatePlaceExists(
+                        UUID placeId) {
 
-            throw new IllegalArgumentException(
-                    "Tipo de archivo no permitido. " +
-                            "Solo se permiten PDF, PNG y JPEG");
-        }
-    }
+                if (placeId == null) {
 
-    // =====================================================
-    // NORMALIZAR NOMBRE
-    // =====================================================
+                        throw new IllegalArgumentException(
+                                        "El identificador del sitio es obligatorio");
+                }
 
-    private String normalizeFileName(
-            String fileName) {
+                if (!placeRepository.existsById(
+                                placeId)) {
 
-        if (fileName == null ||
-                fileName.isBlank()) {
-
-            return "plano";
+                        throw new IllegalArgumentException(
+                                        "No se encontró el sitio con id: "
+                                                        + placeId);
+                }
         }
 
-        String normalized = fileName.trim();
+        // =====================================================
+        // OBTENER ARCHIVO ORIGINAL
+        // =====================================================
 
-        // Evita nombres excesivamente largos
+        @Transactional(readOnly = true)
+        public PlanDocument getPlan(
 
-        if (normalized.length() > 255) {
+                        UUID placeId,
 
-            return normalized.substring(
-                    0,
-                    255);
+                        UUID planId) {
+
+                return planDocumentRepository
+                                .findByIdAndPlaceId(
+                                                planId,
+                                                placeId)
+
+                                .orElseThrow(
+                                                () -> new IllegalArgumentException(
+                                                                "No se encontró el plano solicitado"));
         }
 
-        return normalized;
-    }
+        // =====================================================
+        // GENERAR VISTA PREVIA
+        // =====================================================
 
-    // =====================================================
-    // VERIFICAR SITIO
-    // =====================================================
+        @Transactional(readOnly = true)
+        public byte[] generatePreview(
 
-    private void validatePlaceExists(
-            UUID placeId) {
+                        UUID placeId,
 
-        if (placeId == null) {
+                        UUID planId) {
 
-            throw new IllegalArgumentException(
-                    "El identificador del sitio es obligatorio");
+                // -------------------------------------------------
+                // OBTENER DOCUMENTO
+                // -------------------------------------------------
+
+                PlanDocument document = getPlan(
+                                placeId,
+                                planId);
+
+                String contentType = document.getContentType();
+
+                // =================================================
+                // PDF
+                // =================================================
+
+                if ("application/pdf".equalsIgnoreCase(
+                                contentType)) {
+
+                        System.out.println(
+                                        "========================================");
+
+                        System.out.println(
+                                        "VISTA PREVIA PDF");
+
+                        System.out.println(
+                                        "Archivo: "
+                                                        + document.getFileName());
+
+                        System.out.println(
+                                        "========================================");
+
+                        return document.getFileData();
+                }
+
+                // =================================================
+                // WORD / EXCEL
+                // =================================================
+
+                if (isOfficeDocument(
+                                contentType)) {
+
+                        System.out.println(
+                                        "========================================");
+
+                        System.out.println(
+                                        "VISTA PREVIA OFFICE");
+
+                        System.out.println(
+                                        "Archivo: "
+                                                        + document.getFileName());
+
+                        System.out.println(
+                                        "Tipo: "
+                                                        + contentType);
+
+                        System.out.println(
+                                        "LibreOffice: "
+                                                        + libreOfficeExecutable);
+
+                        System.out.println(
+                                        "========================================");
+
+                        return convertOfficeToPdf(
+                                        document);
+                }
+
+                // =================================================
+                // FORMATO NO COMPATIBLE
+                // =================================================
+
+                throw new IllegalArgumentException(
+                                "El formato del archivo no permite generar "
+                                                + "una vista previa");
         }
 
-        if (!placeRepository.existsById(placeId)) {
+        // =====================================================
+        // VERIFICAR DOCUMENTO OFFICE
+        // =====================================================
 
-            throw new IllegalArgumentException(
-                    "No se encontró el sitio con id: "
-                            + placeId);
-        }
-    }
+        private boolean isOfficeDocument(
+                        String contentType) {
 
-    // =====================================================
-    // OBTENER ARCHIVO
-    // =====================================================
+                if (contentType == null) {
 
-    @Transactional(readOnly = true)
-    public PlanDocument getPlan(
-            UUID placeId,
-            UUID planId) {
+                        return false;
+                }
 
-        return planDocumentRepository
-                .findByIdAndPlaceId(
-                        planId,
-                        placeId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "No se encontró el plano solicitado"));
-    }
+                return contentType.equalsIgnoreCase(
+                                "application/msword")
 
-    // =====================================================
-    // ELIMINAR
-    // =====================================================
+                                ||
 
-    @Transactional
-    public void deletePlan(
+                                contentType.equalsIgnoreCase(
+                                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
-            UUID placeId,
+                                ||
 
-            UUID planId,
+                                contentType.equalsIgnoreCase(
+                                                "application/vnd.ms-excel")
 
-            Authentication authentication) {
+                                ||
 
-        // -------------------------------------------------
-        // VALIDAR AUTENTICACIÓN
-        // -------------------------------------------------
-
-        if (authentication == null ||
-                !authentication.isAuthenticated()) {
-
-            throw new AccessDeniedException(
-                    "No se pudo identificar al usuario autenticado");
+                                contentType.equalsIgnoreCase(
+                                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         }
 
-        // -------------------------------------------------
-        // OBTENER USUARIO AUTENTICADO
-        // -------------------------------------------------
+        // =====================================================
+        // CONVERTIR WORD / EXCEL A PDF
+        // =====================================================
 
-        if (!(authentication.getPrincipal() instanceof User)) {
+        private byte[] convertOfficeToPdf(
+                        PlanDocument document) {
 
-            throw new AccessDeniedException(
-                    "El usuario autenticado no es válido");
+                Path temporaryDirectory = null;
+
+                Path inputFile = null;
+
+                try {
+
+                        // =================================================
+                        // VALIDAR EJECUTABLE DE LIBREOFFICE
+                        // =================================================
+
+                        if (libreOfficeExecutable == null ||
+                                        libreOfficeExecutable.isBlank()) {
+
+                                throw new IllegalStateException(
+                                                "No se configuró la ruta del ejecutable de LibreOffice");
+                        }
+
+                        Path libreOfficePath = Path.of(
+                                        libreOfficeExecutable);
+
+                        if (!Files.exists(
+                                        libreOfficePath)) {
+
+                                throw new IllegalStateException(
+                                                "No se encontró LibreOffice en: "
+                                                                + libreOfficeExecutable);
+                        }
+
+                        // =================================================
+                        // CREAR DIRECTORIO TEMPORAL
+                        // =================================================
+
+                        temporaryDirectory = Files.createTempDirectory(
+                                        "accesoya-plan-preview-");
+
+                        // =================================================
+                        // CREAR ARCHIVO TEMPORAL
+                        // =================================================
+
+                        String fileName = document.getFileName();
+
+                        String extension = getFileExtension(
+                                        fileName);
+
+                        inputFile = temporaryDirectory.resolve(
+                                        "documento" + extension);
+
+                        Files.write(
+                                        inputFile,
+                                        document.getFileData());
+
+                        // =================================================
+                        // EJECUTAR LIBREOFFICE
+                        // =================================================
+
+                        ProcessBuilder processBuilder = new ProcessBuilder(
+
+                                        libreOfficeExecutable,
+
+                                        "--headless",
+
+                                        "--convert-to",
+                                        "pdf",
+
+                                        "--outdir",
+                                        temporaryDirectory.toString(),
+
+                                        inputFile.toString());
+
+                        processBuilder
+                                        .redirectErrorStream(
+                                                        true);
+
+                        System.out.println(
+                                        "Iniciando conversión Office → PDF...");
+
+                        System.out.println(
+                                        "Ejecutable: "
+                                                        + libreOfficeExecutable);
+
+                        System.out.println(
+                                        "Archivo temporal: "
+                                                        + inputFile);
+
+                        Process process = processBuilder.start();
+
+                        // =================================================
+                        // LEER SALIDA DE LIBREOFFICE
+                        // =================================================
+
+                        String processOutput;
+
+                        try (InputStream inputStream = process.getInputStream()) {
+
+                                processOutput = new String(
+                                                inputStream.readAllBytes(),
+                                                StandardCharsets.UTF_8);
+                        }
+
+                        // =================================================
+                        // ESPERAR FINALIZACIÓN
+                        // =================================================
+
+                        int exitCode = process.waitFor();
+
+                        System.out.println(
+                                        "Código de salida LibreOffice: "
+                                                        + exitCode);
+
+                        if (!processOutput.isBlank()) {
+
+                                System.out.println(
+                                                "Salida LibreOffice:");
+
+                                System.out.println(
+                                                processOutput);
+                        }
+
+                        // =================================================
+                        // VALIDAR RESULTADO
+                        // =================================================
+
+                        if (exitCode != 0) {
+
+                                throw new IllegalStateException(
+                                                "LibreOffice no pudo convertir "
+                                                                + "el documento. "
+                                                                + processOutput);
+                        }
+
+                        // =================================================
+                        // LOCALIZAR PDF
+                        // =================================================
+
+                        String baseName = removeExtension(
+                                        inputFile
+                                                        .getFileName()
+                                                        .toString());
+
+                        Path pdfFile = temporaryDirectory.resolve(
+                                        baseName + ".pdf");
+
+                        if (!Files.exists(
+                                        pdfFile)) {
+
+                                throw new IllegalStateException(
+                                                "LibreOffice finalizó pero "
+                                                                + "no generó el archivo PDF. "
+                                                                + "Salida: "
+                                                                + processOutput);
+                        }
+
+                        // =================================================
+                        // LEER PDF
+                        // =================================================
+
+                        byte[] pdf = Files.readAllBytes(
+                                        pdfFile);
+
+                        System.out.println(
+                                        "========================================");
+
+                        System.out.println(
+                                        "PDF GENERADO CORRECTAMENTE");
+
+                        System.out.println(
+                                        "Archivo original: "
+                                                        + document.getFileName());
+
+                        System.out.println(
+                                        "Tamaño PDF: "
+                                                        + pdf.length
+                                                        + " bytes");
+
+                        System.out.println(
+                                        "========================================");
+
+                        return pdf;
+
+                } catch (IOException exception) {
+
+                        throw new IllegalStateException(
+                                        "No se pudo ejecutar LibreOffice "
+                                                        + "para generar la vista previa.",
+                                        exception);
+
+                } catch (InterruptedException exception) {
+
+                        Thread.currentThread().interrupt();
+
+                        throw new IllegalStateException(
+                                        "La conversión del documento "
+                                                        + "fue interrumpida.",
+                                        exception);
+
+                } finally {
+
+                        // =================================================
+                        // LIMPIAR ARCHIVOS TEMPORALES
+                        // =================================================
+
+                        deleteTemporaryDirectory(
+                                        temporaryDirectory);
+                }
         }
 
-        User authenticatedUser = (User) authentication.getPrincipal();
+        // =====================================================
+        // OBTENER EXTENSIÓN
+        // =====================================================
 
-        // -------------------------------------------------
-        // BUSCAR PLANO
-        // -------------------------------------------------
+        private String getFileExtension(
+                        String fileName) {
 
-        PlanDocument document = planDocumentRepository
-                .findByIdAndPlaceId(
-                        planId,
-                        placeId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "No se encontró el plano solicitado"));
+                if (fileName == null ||
+                                fileName.isBlank()) {
 
-        // -------------------------------------------------
-        // ELIMINAR
-        // -------------------------------------------------
+                        return "";
+                }
 
-        planDocumentRepository.delete(
-                document);
-    }
+                int index = fileName.lastIndexOf('.');
+
+                if (index < 0) {
+
+                        return "";
+                }
+
+                return fileName.substring(
+                                index);
+        }
+
+        // =====================================================
+        // ELIMINAR EXTENSIÓN
+        // =====================================================
+
+        private String removeExtension(
+                        String fileName) {
+
+                if (fileName == null ||
+                                fileName.isBlank()) {
+
+                        return "documento";
+                }
+
+                int index = fileName.lastIndexOf('.');
+
+                if (index < 0) {
+
+                        return fileName;
+                }
+
+                return fileName.substring(
+                                0,
+                                index);
+        }
+
+        // =====================================================
+        // ELIMINAR DIRECTORIO TEMPORAL
+        // =====================================================
+
+        private void deleteTemporaryDirectory(
+                        Path directory) {
+
+                if (directory == null ||
+                                !Files.exists(directory)) {
+
+                        return;
+                }
+
+                try (Stream<Path> paths = Files.walk(directory)) {
+
+                        paths
+                                        .sorted(
+                                                        Comparator.reverseOrder())
+
+                                        .forEach(
+                                                        path -> {
+
+                                                                try {
+
+                                                                        Files.deleteIfExists(
+                                                                                        path);
+
+                                                                } catch (IOException exception) {
+
+                                                                        System.err.println(
+                                                                                        "No se pudo eliminar archivo temporal: "
+                                                                                                        + path);
+                                                                }
+                                                        });
+
+                } catch (IOException exception) {
+
+                        System.err.println(
+                                        "No se pudo limpiar el directorio temporal: "
+                                                        + directory);
+                }
+        }
+
+        // =====================================================
+        // ELIMINAR DOCUMENTO
+        // =====================================================
+
+        @Transactional
+        public void deletePlan(
+
+                        UUID placeId,
+
+                        UUID planId,
+
+                        Authentication authentication) {
+
+                // -------------------------------------------------
+                // VALIDAR AUTENTICACIÓN
+                // -------------------------------------------------
+
+                if (authentication == null ||
+                                !authentication.isAuthenticated()) {
+
+                        throw new AccessDeniedException(
+                                        "No se pudo identificar al usuario autenticado");
+                }
+
+                // -------------------------------------------------
+                // VALIDAR USUARIO
+                // -------------------------------------------------
+
+                if (!(authentication.getPrincipal() instanceof User)) {
+
+                        throw new AccessDeniedException(
+                                        "El usuario autenticado no es válido");
+                }
+
+                // -------------------------------------------------
+                // BUSCAR PLANO
+                // -------------------------------------------------
+
+                PlanDocument document = planDocumentRepository
+                                .findByIdAndPlaceId(
+                                                planId,
+                                                placeId)
+
+                                .orElseThrow(
+                                                () -> new IllegalArgumentException(
+                                                                "No se encontró el plano solicitado"));
+
+                // -------------------------------------------------
+                // ELIMINAR
+                // -------------------------------------------------
+
+                planDocumentRepository.delete(
+                                document);
+        }
 }
