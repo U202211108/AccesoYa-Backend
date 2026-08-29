@@ -1,5 +1,6 @@
 package accesoya_backend.places.application.dto;
 
+import accesoya_backend.places.domain.model.Place;
 import accesoya_backend.places.domain.model.PlaceSource;
 import accesoya_backend.places.domain.model.PlaceStatus;
 import accesoya_backend.places.domain.model.PlaceType;
@@ -9,55 +10,120 @@ import java.util.UUID;
 
 public record PlaceDetailResponse(
 
-                UUID id,
+        UUID id,
 
-                String name,
+        String name,
 
-                String description,
+        String description,
 
-                String address,
+        String address,
 
-                String department,
+        String department,
 
-                String province,
+        String province,
 
-                String district,
+        String district,
 
-                String ubigeo,
+        String ubigeo,
 
-                Double latitude,
+        Double latitude,
 
-                Double longitude,
+        Double longitude,
 
-                PlaceType type,
+        PlaceType type,
 
-                PlaceSource source,
+        String tipoEstacion,
 
-                PlaceStatus status,
+        PlaceSource source,
 
-                String classification,
+        PlaceStatus status,
 
-                String establishmentType,
+        String classification,
 
-                String category,
+        String establishmentType,
 
-                String phone,
+        String category,
 
-                String openingHours,
+        String phone,
 
-                String sourceStatus,
+        String openingHours,
 
-                String imageUrl1,
+        String sourceStatus,
 
-                String imageUrl2,
+        String imageUrl1,
 
-                String imageUrl3,
+        String imageUrl2,
 
-                PlaceAccessibilityResponse accessibility,
+        String imageUrl3,
 
-                Instant createdAt,
+        Instant createdAt,
 
-                Instant updatedAt
+        Instant updatedAt
 
 ) {
+
+    // =====================================================
+    // CONVERTIR PLACE → PLACE DETAIL RESPONSE
+    // =====================================================
+
+    public static PlaceDetailResponse from(Place place) {
+
+        String tipoEstacion = null;
+
+        if (place.getFlmNocData() != null) {
+            tipoEstacion = place.getFlmNocData().getTipoEstacion();
+        }
+
+        return new PlaceDetailResponse(
+
+                place.getId(),
+
+                place.getName(),
+
+                place.getDescription(),
+
+                place.getAddress(),
+
+                place.getDepartment(),
+
+                place.getProvince(),
+
+                place.getDistrict(),
+
+                place.getUbigeo(),
+
+                place.getLatitude(),
+
+                place.getLongitude(),
+
+                place.getType(),
+
+                tipoEstacion,
+
+                place.getSource(),
+
+                place.getStatus(),
+
+                place.getClassification(),
+
+                place.getEstablishmentType(),
+
+                place.getCategory(),
+
+                place.getPhone(),
+
+                place.getOpeningHours(),
+
+                place.getSourceStatus(),
+
+                place.getImageUrl1(),
+
+                place.getImageUrl2(),
+
+                place.getImageUrl3(),
+
+                place.getCreatedAt(),
+
+                place.getUpdatedAt());
+    }
 }

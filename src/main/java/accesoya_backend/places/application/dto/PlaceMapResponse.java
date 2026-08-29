@@ -9,88 +9,88 @@ import java.util.UUID;
 
 public record PlaceMapResponse(
 
-        UUID id,
+                UUID id,
 
-        String externalId,
+                String externalId,
 
-        String name,
+                String name,
 
-        Double latitude,
+                Double latitude,
 
-        Double longitude,
+                Double longitude,
 
-        PlaceType type,
+                PlaceType type,
 
-        PlaceStatus status,
+                PlaceStatus status,
 
-        PlaceSource source,
+                PlaceSource source,
 
-        String address,
+                String address,
 
-        String department,
+                String department,
 
-        String province,
+                String province,
 
-        String district,
+                String district,
 
-        String ubigeo,
+                String ubigeo,
 
-        String phone,
+                String phone,
 
-        String openingHours,
+                String openingHours,
 
-        String category,
+                String category,
 
-        String description,
+                String description,
 
-        String establishmentType,
+                String establishmentType,
 
-        FlmNocResponse flmNoc
+                FlmNocResponse flmNoc
 
 ) {
 
-    public static PlaceMapResponse from(
-            Place place) {
+        public static PlaceMapResponse from(
+                        Place place) {
 
-        return new PlaceMapResponse(
+                return new PlaceMapResponse(
 
-                place.getId(),
+                                place.getId(),
 
-                place.getExternalId(),
+                                place.getExternalId(),
 
-                place.getName(),
+                                place.getName(),
 
-                place.getLatitude(),
+                                place.getLatitude(),
 
-                place.getLongitude(),
+                                place.getLongitude(),
 
-                place.getType(),
+                                place.getType(),
 
-                place.getStatus(),
+                                place.getStatus(),
 
-                place.getSource(),
+                                place.getSource(),
 
-                place.getAddress(),
+                                place.getAddress(),
 
-                place.getDepartment(),
+                                place.getDepartment(),
 
-                place.getProvince(),
+                                place.getProvince(),
 
-                place.getDistrict(),
+                                place.getDistrict(),
 
-                place.getUbigeo(),
+                                place.getUbigeo(),
 
-                place.getPhone(),
+                                place.getPhone(),
 
-                place.getOpeningHours(),
+                                place.getOpeningHours(),
 
-                place.getCategory(),
+                                place.getCategory(),
 
-                place.getDescription(),
+                                place.getDescription(),
 
-                place.getEstablishmentType(),
+                                place.getEstablishmentType(),
 
-                FlmNocResponse.from(
-                        place.getFlmNocData()));
-    }
+                                FlmNocResponse.from(
+                                                place.getFlmNocData()));
+        }
 }

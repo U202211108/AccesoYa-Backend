@@ -16,6 +16,10 @@ public record FlmNocResponse(
 
         String zonal,
 
+        String tipoEstacion,
+
+        String tecnologia,
+
         String propietarioTorre,
 
         String clasificacionPropietarioTorre,
@@ -54,6 +58,10 @@ public record FlmNocResponse(
                 data.getCodigoEmplazamiento(),
 
                 data.getZonal(),
+
+                data.getTipoEstacion(),
+
+                data.getTecnologia(),
 
                 data.getPropietarioTorre(),
 

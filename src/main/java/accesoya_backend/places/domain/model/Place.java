@@ -1,8 +1,9 @@
 package accesoya_backend.places.domain.model;
 
+import accesoya_backend.iam.domain.model.User;
 import jakarta.persistence.*;
 import lombok.*;
-import accesoya_backend.iam.domain.model.User;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -103,20 +104,9 @@ public class Place {
     @Column(nullable = false)
     private Instant updatedAt;
 
-    @PrePersist
-    protected void onCreate() {
-
-        Instant now = Instant.now();
-
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-
-        updatedAt = Instant.now();
-    }
+    // =====================================================
+    // PROPIETARIO
+    // =====================================================
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
@@ -128,4 +118,27 @@ public class Place {
 
     @OneToOne(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private FlmNocData flmNocData;
+
+    // =====================================================
+    // CREACIÓN
+    // =====================================================
+
+    @PrePersist
+    protected void onCreate() {
+
+        Instant now = Instant.now();
+
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    // =====================================================
+    // ACTUALIZACIÓN
+    // =====================================================
+
+    @PreUpdate
+    protected void onUpdate() {
+
+        updatedAt = Instant.now();
+    }
 }

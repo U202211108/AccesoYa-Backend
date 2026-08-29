@@ -1,12 +1,10 @@
 package accesoya_backend.places.interfaces.rest;
 
 import accesoya_backend.places.application.dto.CreatePlaceRequest;
-import accesoya_backend.places.application.dto.PlaceAccessibilityResponse;
-import accesoya_backend.places.application.dto.PlaceDetailResponse;
+import accesoya_backend.places.application.dto.FlmNocFilterResponse;
 import accesoya_backend.places.application.dto.PlaceMapResponse;
 import accesoya_backend.places.application.dto.PlaceResponse;
 import accesoya_backend.places.application.dto.PlaceSearchResponse;
-import accesoya_backend.places.application.dto.UpdatePlaceAccessibilityRequest;
 import accesoya_backend.places.application.service.PlaceService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,9 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import accesoya_backend.places.application.dto.FlmNocSiteResponse;
-
-import jakarta.validation.Valid;
-
+import accesoya_backend.places.application.dto.PlaceDetailResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.HttpStatus;
@@ -30,7 +26,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -85,6 +80,18 @@ public class PlaceController {
                                 direction);
 
                 return ResponseEntity.ok(response);
+        }
+
+        // =====================================================
+        // DETALLE DE LUGAR
+        // =====================================================
+
+        @GetMapping("/{id}")
+        public ResponseEntity<PlaceDetailResponse> getPlaceById(
+                        @PathVariable UUID id) {
+
+                return ResponseEntity.ok(
+                                placeService.getPlaceById(id));
         }
 
         // =====================================================
@@ -241,71 +248,6 @@ public class PlaceController {
                 return ResponseEntity.ok(response);
         }
 
-        // =====================================================
-        // DETALLE DE LUGAR
-        // =====================================================
-
-        @Operation(summary = "Consultar detalle de un lugar", description = """
-                        Obtiene la información detallada de un lugar
-                        registrado en AccesoYa mediante su identificador.
-                        """)
-        @ApiResponses({
-                        @ApiResponse(responseCode = "200", description = "Detalle del lugar obtenido correctamente"),
-                        @ApiResponse(responseCode = "400", description = "Identificador inválido"),
-                        @ApiResponse(responseCode = "401", description = "No autenticado"),
-                        @ApiResponse(responseCode = "404", description = "Lugar no encontrado")
-        })
-        @GetMapping("/{id}")
-        public ResponseEntity<PlaceDetailResponse> getPlaceById(
-
-                        @Parameter(description = "UUID del lugar", example = "3fbc3723-f78e-4b6a-8869-4c152fd9eaa5") @PathVariable UUID id
-
-        ) {
-
-                PlaceDetailResponse response = placeService.getPlaceById(id);
-
-                return ResponseEntity.ok(response);
-        }
-
-        // =====================================================
-        // ACTUALIZAR ACCESIBILIDAD
-        // =====================================================
-
-        @Operation(summary = "Actualizar características de accesibilidad", description = """
-                        Permite al propietario de un establecimiento
-                        actualizar las características de accesibilidad
-                        asociadas a su lugar.
-
-                        El usuario debe tener rol ESTABLISHMENT y ser
-                        propietario del lugar que intenta modificar.
-                        """)
-        @ApiResponses({
-                        @ApiResponse(responseCode = "200", description = "Características de accesibilidad actualizadas correctamente"),
-                        @ApiResponse(responseCode = "400", description = "Datos de accesibilidad inválidos"),
-                        @ApiResponse(responseCode = "401", description = "No autenticado"),
-                        @ApiResponse(responseCode = "403", description = "El usuario no tiene permisos sobre este establecimiento"),
-                        @ApiResponse(responseCode = "404", description = "Lugar no encontrado")
-        })
-        @PutMapping("/{id}/accessibility")
-        @PreAuthorize("hasRole('ESTABLISHMENT')")
-        public ResponseEntity<PlaceAccessibilityResponse> updateAccessibility(
-
-                        @Parameter(description = "UUID del lugar", example = "3fbc3723-f78e-4b6a-8869-4c152fd9eaa5") @PathVariable UUID id,
-
-                        @Valid @RequestBody UpdatePlaceAccessibilityRequest request,
-
-                        Authentication authentication
-
-        ) {
-
-                PlaceAccessibilityResponse response = placeService.updateAccessibility(
-                                id,
-                                request,
-                                authentication);
-
-                return ResponseEntity.ok(response);
-        }
-
         @PostMapping
         @PreAuthorize("hasRole('ESTABLISHMENT')")
         @Operation(summary = "Registrar establecimiento", description = """
@@ -346,6 +288,46 @@ public class PlaceController {
                         @RequestParam String query) {
 
                 List<PlaceMapResponse> response = placeService.searchPlacesForMap(query);
+
+                return ResponseEntity.ok(response);
+        }
+
+        @GetMapping("/flm-noc/filters")
+        public FlmNocFilterResponse getFlmNocFilters() {
+
+                return placeService.getFlmNocFilters();
+        }
+
+        // =====================================================
+        // FILTRAR SITIOS FLM / NOC
+        // =====================================================
+
+        @Operation(summary = "Filtrar sitios FLM/NOC", description = """
+                        Obtiene sitios FLM/NOC activos aplicando
+                        filtros opcionales por tipo de estación,
+                        zonal y tecnología.
+                        """)
+        @GetMapping("/flm-noc/filter")
+        public ResponseEntity<List<FlmNocSiteResponse>> filterFlmNocSites(
+
+                        @RequestParam(required = false) String tipoEstacion,
+
+                        @RequestParam(required = false) String zonal,
+
+                        @RequestParam(required = false) String tecnologia,
+
+                        @RequestParam(defaultValue = "0") int page,
+
+                        @RequestParam(defaultValue = "500") int size
+
+        ) {
+
+                List<FlmNocSiteResponse> response = placeService.filterFlmNocSites(
+                                tipoEstacion,
+                                zonal,
+                                tecnologia,
+                                page,
+                                size);
 
                 return ResponseEntity.ok(response);
         }
