@@ -33,32 +33,14 @@ public class DashboardService {
 
                 Role role = getRole(authentication);
 
-                // =================================================
-                // VALIDAR ROL
-                // =================================================
-
-                if (role != Role.CONSULTOR
-                                && role != Role.OPERADOR_FLNOC
-                                && role != Role.SUPERVISOR
-                                && role != Role.ADMIN) {
-
-                        throw new SecurityException(
-                                        "El usuario no tiene un rol válido para acceder al dashboard");
-                }
-
                 PlaceStatus status = PlaceStatus.ACTIVE;
 
-                // =================================================
+                // =====================================================
                 // INFORMACIÓN GENERAL
-                // =================================================
-                //
-                // Esta información sí puede ser consultada por
-                // CONSULTOR.
-                //
-                // NO contiene información operacional FLM/NOC.
-                // =================================================
+                // =====================================================
 
-                long totalSites = flmNocDataRepository.countByPlaceStatus(status);
+                long totalSites = flmNocDataRepository
+                                .countByPlaceStatus(status);
 
                 List<DashboardDistribution> byDepartment = map(
                                 flmNocDataRepository
@@ -72,78 +54,32 @@ public class DashboardService {
                                 flmNocDataRepository
                                                 .countByDistrict(status));
 
-                // =================================================
+                // =====================================================
                 // CONSULTOR
-                // =================================================
-                //
-                // CONSULTOR solamente recibe:
-                //
-                // - totalSites
-                // - byDepartment
-                // - byProvince
-                // - byDistrict
-                //
-                // NO recibe:
-                //
-                // - byZonal
-                // - byTowerOwner
-                // - byTowerOwnerClassification
-                // - reactionCoverage
-                // - patrol
-                // - guard
-                // - surveillance
-                // - dynamicRound
-                // - csiMonitoring
-                // =================================================
+                // =====================================================
 
                 if (role == Role.CONSULTOR) {
 
-                        return new DashboardResponse(
+                        return DashboardResponse.consultant(
 
                                         totalSites,
 
-                                        List.of(), // byZonal
-
                                         byDepartment,
-
                                         byProvince,
-
-                                        byDistrict,
-
-                                        List.of(), // byTowerOwner
-
-                                        List.of(), // byTowerOwnerClassification
-
-                                        List.of(), // reactionCoverage
-
-                                        List.of(), // patrol
-
-                                        List.of(), // guard
-
-                                        List.of(), // surveillance
-
-                                        List.of(), // dynamicRound
-
-                                        List.of() // csiMonitoring
-                        );
+                                        byDistrict);
                 }
 
-                // =================================================
-                // DASHBOARD OPERATIVO
-                // OPERADOR_FLNOC / SUPERVISOR / ADMIN
-                // =================================================
+                // =====================================================
+                // INFORMACIÓN ZONAL
+                // =====================================================
 
                 List<DashboardDistribution> byZonal = map(
                                 flmNocDataRepository
                                                 .countByZonal(status));
 
-                List<DashboardDistribution> byTowerOwner = map(
-                                flmNocDataRepository
-                                                .countByTowerOwner(status));
-
-                List<DashboardDistribution> byTowerOwnerClassification = map(
-                                flmNocDataRepository
-                                                .countByTowerOwnerClassification(status));
+                // =====================================================
+                // OPERACIÓN / SEGURIDAD
+                // =====================================================
 
                 List<DashboardDistribution> reactionCoverage = map(
                                 flmNocDataRepository
@@ -169,48 +105,113 @@ public class DashboardService {
                                 flmNocDataRepository
                                                 .countByCsiMonitoring(status));
 
-                // =================================================
-                // RESPUESTA OPERATIVA
-                // =================================================
+                // =====================================================
+                // OPERADOR FLM/NOC
+                // =====================================================
 
-                return new DashboardResponse(
+                if (role == Role.OPERADOR_FLNOC) {
 
-                                totalSites,
+                        return DashboardResponse.operator(
 
-                                byZonal,
+                                        totalSites,
 
-                                byDepartment,
+                                        byZonal,
 
-                                byProvince,
+                                        byDepartment,
+                                        byProvince,
+                                        byDistrict,
 
-                                byDistrict,
+                                        reactionCoverage,
+                                        patrol,
+                                        guard,
+                                        surveillance,
+                                        dynamicRound,
+                                        csiMonitoring);
+                }
 
-                                byTowerOwner,
+                // =====================================================
+                // INFORMACIÓN DE TORRES
+                // =====================================================
 
-                                byTowerOwnerClassification,
+                List<DashboardDistribution> byTowerOwner = map(
+                                flmNocDataRepository
+                                                .countByTowerOwner(status));
 
-                                reactionCoverage,
+                List<DashboardDistribution> byTowerOwnerClassification = map(
+                                flmNocDataRepository
+                                                .countByTowerOwnerClassification(status));
 
-                                patrol,
+                // =====================================================
+                // SUPERVISOR
+                // =====================================================
 
-                                guard,
+                if (role == Role.SUPERVISOR) {
 
-                                surveillance,
+                        return DashboardResponse.supervisor(
 
-                                dynamicRound,
+                                        totalSites,
 
-                                csiMonitoring);
+                                        byZonal,
+
+                                        byDepartment,
+                                        byProvince,
+                                        byDistrict,
+
+                                        byTowerOwner,
+                                        byTowerOwnerClassification,
+
+                                        reactionCoverage,
+                                        patrol,
+                                        guard,
+                                        surveillance,
+                                        dynamicRound,
+                                        csiMonitoring);
+                }
+
+                // =====================================================
+                // ADMIN
+                // =====================================================
+
+                if (role == Role.ADMIN) {
+
+                        return DashboardResponse.admin(
+
+                                        totalSites,
+
+                                        byZonal,
+
+                                        byDepartment,
+                                        byProvince,
+                                        byDistrict,
+
+                                        byTowerOwner,
+                                        byTowerOwnerClassification,
+
+                                        reactionCoverage,
+                                        patrol,
+                                        guard,
+                                        surveillance,
+                                        dynamicRound,
+                                        csiMonitoring);
+                }
+
+                // =====================================================
+                // ROL NO VÁLIDO
+                // =====================================================
+
+                throw new SecurityException(
+                                "El usuario no tiene un rol válido para acceder al dashboard");
         }
 
         // =====================================================
-        // OBTENER ROL DEL USUARIO AUTENTICADO
+        // OBTENER ROL
         // =====================================================
 
         private Role getRole(
                         Authentication authentication) {
 
-                if (authentication == null
-                                || !(authentication.getPrincipal() instanceof User user)) {
+                if (authentication == null ||
+                                !(authentication.getPrincipal() instanceof User user)) {
 
                         throw new SecurityException(
                                         "No se pudo identificar al usuario autenticado");
@@ -232,7 +233,9 @@ public class DashboardService {
         private List<DashboardDistribution> map(
                         List<Object[]> rows) {
 
-                if (rows == null || rows.isEmpty()) {
+                if (rows == null ||
+                                rows.isEmpty()) {
+
                         return List.of();
                 }
 
@@ -245,7 +248,8 @@ public class DashboardService {
                                                                 : null,
 
                                                 row[1] != null
-                                                                ? ((Number) row[1]).longValue()
+                                                                ? ((Number) row[1])
+                                                                                .longValue()
                                                                 : 0L))
 
                                 .toList();
