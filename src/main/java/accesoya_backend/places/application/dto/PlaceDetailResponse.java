@@ -63,18 +63,38 @@ public record PlaceDetailResponse(
 ) {
 
     // =====================================================
-    // CONVERTIR PLACE → PLACE DETAIL RESPONSE
+    // PLACE → PLACE DETAIL RESPONSE
     // =====================================================
 
-    public static PlaceDetailResponse from(Place place) {
+    public static PlaceDetailResponse from(
+            Place place,
+            boolean includeOperationalData) {
 
         String tipoEstacion = null;
 
-        if (place.getFlmNocData() != null) {
-            tipoEstacion = place.getFlmNocData().getTipoEstacion();
+        // =================================================
+        // INFORMACIÓN OPERACIONAL FLM / NOC
+        // =================================================
+        //
+        // CONSULTOR:
+        // No recibe información operacional.
+        //
+        // OPERADOR_FLNOC / SUPERVISOR / ADMIN:
+        // Sí pueden recibir información operacional.
+        // =================================================
+
+        if (includeOperationalData
+                && place.getFlmNocData() != null) {
+
+            tipoEstacion = place.getFlmNocData()
+                    .getTipoEstacion();
         }
 
         return new PlaceDetailResponse(
+
+                // =================================================
+                // PLACE
+                // =================================================
 
                 place.getId(),
 
@@ -98,7 +118,15 @@ public record PlaceDetailResponse(
 
                 place.getType(),
 
+                // =================================================
+                // FLM / NOC
+                // =================================================
+
                 tipoEstacion,
+
+                // =================================================
+                // INFORMACIÓN GENERAL
+                // =================================================
 
                 place.getSource(),
 

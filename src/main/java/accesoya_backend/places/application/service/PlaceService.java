@@ -15,11 +15,11 @@ import accesoya_backend.places.domain.model.Place;
 import accesoya_backend.places.domain.model.PlaceSource;
 import accesoya_backend.places.domain.model.PlaceStatus;
 import accesoya_backend.places.domain.model.PlaceType;
+
 import accesoya_backend.places.domain.repository.PlaceRepository;
 
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -37,6 +37,10 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class PlaceService {
+
+        // =====================================================
+        // REPOSITORIO
+        // =====================================================
 
         private final PlaceRepository placeRepository;
 
@@ -73,12 +77,15 @@ public class PlaceService {
                                                 sortDirection,
                                                 normalizedSortBy));
 
-                Page<Place> places = placeRepository
+                List<Place> places = placeRepository
                                 .findByNameContainingIgnoreCaseAndFlmNocDataIsNotNull(
                                                 name.trim(),
                                                 pageable);
 
-                return toSearchResponse(places);
+                return toSearchResponse(
+                                places,
+                                page,
+                                size);
         }
 
         // =====================================================
@@ -128,7 +135,7 @@ public class PlaceService {
 
                 if (type == null || type.trim().isBlank()) {
                         throw new IllegalArgumentException(
-                                        "La categoría es obligatoria");
+                                        "El tipo de lugar es obligatorio");
                 }
 
                 validatePagination(page, size);
@@ -136,14 +143,13 @@ public class PlaceService {
                 PlaceType placeType;
 
                 try {
-
                         placeType = PlaceType.valueOf(
                                         type.trim().toUpperCase());
 
                 } catch (IllegalArgumentException exception) {
 
                         throw new IllegalArgumentException(
-                                        "Categoría de lugar no válida: " + type);
+                                        "Tipo de lugar no válido: " + type);
                 }
 
                 String normalizedSortBy = normalizeSortField(sortBy);
@@ -159,12 +165,15 @@ public class PlaceService {
                                                 sortDirection,
                                                 normalizedSortBy));
 
-                Page<Place> places = placeRepository
+                List<Place> places = placeRepository
                                 .findByTypeAndFlmNocDataIsNotNull(
                                                 placeType,
                                                 pageable);
 
-                return toSearchResponse(places);
+                return toSearchResponse(
+                                places,
+                                page,
+                                size);
         }
 
         // =====================================================
@@ -191,25 +200,44 @@ public class PlaceService {
 
         @Transactional(readOnly = true)
         public PlaceDetailResponse getPlaceById(
-                        UUID id) {
+                        UUID id,
+                        Authentication authentication) {
 
                 if (id == null) {
                         throw new IllegalArgumentException(
                                         "El ID del lugar es obligatorio");
                 }
 
+                User authenticatedUser = getAuthenticatedUser(authentication);
+
                 Place place = placeRepository
                                 .findById(id)
                                 .orElseThrow(
-                                                () -> new RuntimeException(
+                                                () -> new IllegalArgumentException(
                                                                 "Lugar no encontrado: " + id));
 
-                return PlaceDetailResponse.from(place);
+                boolean includeOperationalData = canViewOperationalData(
+                                authenticatedUser.getRole());
+
+                return PlaceDetailResponse.from(
+                                place,
+                                includeOperationalData);
         }
 
         // =====================================================
-        // LUGARES PARA EL MAPA
-        // SOLO FLM / NOC
+        // OBTENER LUGARES PARA EL MAPA
+        //
+        // IMPORTANTE:
+        // Se obtiene Authentication desde SecurityContextHolder
+        // para que el Controller pueda llamar:
+        //
+        // getPlacesForMap(
+        // minLatitude,
+        // maxLatitude,
+        // minLongitude,
+        // maxLongitude,
+        // zoom
+        // )
         // =====================================================
 
         @Transactional(readOnly = true)
@@ -228,27 +256,44 @@ public class PlaceService {
 
                 validateZoom(zoom);
 
+                Authentication authentication = SecurityContextHolder
+                                .getContext()
+                                .getAuthentication();
+
+                User authenticatedUser = getAuthenticatedUser(authentication);
+
+                boolean includeOperationalData = canViewOperationalData(
+                                authenticatedUser);
+
                 int limit = calculateMapLimit(zoom);
 
                 Pageable pageable = PageRequest.of(
                                 0,
                                 limit);
 
-                List<Place> places = placeRepository.findPlacesInBoundingBox(
-                                minLatitude,
-                                maxLatitude,
-                                minLongitude,
-                                maxLongitude,
-                                pageable);
+                List<Place> places = placeRepository
+                                .findPlacesInBoundingBox(
+                                                minLatitude,
+                                                maxLatitude,
+                                                minLongitude,
+                                                maxLongitude,
+                                                pageable);
 
-                return places.stream()
-                                .map(PlaceMapResponse::from)
+                return places
+                                .stream()
+                                .map(place -> PlaceMapResponse.from(
+                                                place,
+                                                includeOperationalData))
                                 .toList();
         }
 
         // =====================================================
-        // BÚSQUEDA GLOBAL DEL MAPA
-        // SOLO FLM / NOC
+        // BÚSQUEDA GLOBAL PARA EL MAPA
+        //
+        // IMPORTANTE:
+        // El Controller puede llamar simplemente:
+        //
+        // searchPlacesForMap(query)
         // =====================================================
 
         @Transactional(readOnly = true)
@@ -261,39 +306,54 @@ public class PlaceService {
                         return List.of();
                 }
 
+                Authentication authentication = SecurityContextHolder
+                                .getContext()
+                                .getAuthentication();
+
+                User authenticatedUser = getAuthenticatedUser(authentication);
+
+                boolean includeOperationalData = canViewOperationalData(
+                                authenticatedUser);
+
                 Pageable pageable = PageRequest.of(
                                 0,
                                 50);
 
-                List<Place> places = placeRepository.searchPlacesForMap(
-                                query.trim(),
-                                pageable);
+                List<Place> places = placeRepository
+                                .searchPlacesForMap(
+                                                query.trim(),
+                                                pageable);
 
-                return places.stream()
-                                .map(PlaceMapResponse::from)
+                return places
+                                .stream()
+                                .map(place -> PlaceMapResponse.from(
+                                                place,
+                                                includeOperationalData))
                                 .toList();
         }
 
         // =====================================================
-        // MIS ESTABLECIMIENTOS
+        // MIS SITIOS
         // =====================================================
 
         @Transactional(readOnly = true)
         public List<PlaceMapResponse> getMyPlaces(
                         Authentication authentication) {
 
-                if (authentication == null ||
-                                !(authentication.getPrincipal() instanceof User authenticatedUser)) {
+                User authenticatedUser = getAuthenticatedUser(authentication);
 
-                        throw new SecurityException(
-                                        "No se pudo identificar al usuario autenticado");
-                }
+                boolean includeOperationalData = canViewOperationalData(
+                                authenticatedUser);
 
-                List<Place> places = placeRepository.findByOwnerId(
-                                authenticatedUser.getId());
+                List<Place> places = placeRepository
+                                .findByOwnerId(
+                                                authenticatedUser.getId());
 
-                return places.stream()
-                                .map(PlaceMapResponse::from)
+                return places
+                                .stream()
+                                .map(place -> PlaceMapResponse.from(
+                                                place,
+                                                includeOperationalData))
                                 .toList();
         }
 
@@ -332,18 +392,23 @@ public class PlaceService {
 
         // =====================================================
         // FILTRO POR TIPO DE ESTACIÓN
-        // LEGACY
         // =====================================================
 
         @Transactional(readOnly = true)
         public List<PlaceMapResponse> getPlacesByTipoEstacion(
-                        String tipoEstacion) {
+                        String tipoEstacion,
+                        Authentication authentication) {
 
                 if (tipoEstacion == null ||
                                 tipoEstacion.trim().isBlank()) {
 
                         return List.of();
                 }
+
+                User authenticatedUser = getAuthenticatedUser(authentication);
+
+                boolean includeOperationalData = canViewOperationalData(
+                                authenticatedUser);
 
                 Pageable pageable = PageRequest.of(
                                 0,
@@ -354,24 +419,31 @@ public class PlaceService {
                                                 tipoEstacion.trim(),
                                                 pageable)
                                 .stream()
-                                .map(PlaceMapResponse::from)
+                                .map(place -> PlaceMapResponse.from(
+                                                place,
+                                                includeOperationalData))
                                 .toList();
         }
 
         // =====================================================
         // FILTRO POR TECNOLOGÍA
-        // LEGACY
         // =====================================================
 
         @Transactional(readOnly = true)
         public List<PlaceMapResponse> getPlacesByTecnologia(
-                        String tecnologia) {
+                        String tecnologia,
+                        Authentication authentication) {
 
                 if (tecnologia == null ||
                                 tecnologia.trim().isBlank()) {
 
                         return List.of();
                 }
+
+                User authenticatedUser = getAuthenticatedUser(authentication);
+
+                boolean includeOperationalData = canViewOperationalData(
+                                authenticatedUser);
 
                 Pageable pageable = PageRequest.of(
                                 0,
@@ -382,24 +454,31 @@ public class PlaceService {
                                                 tecnologia.trim(),
                                                 pageable)
                                 .stream()
-                                .map(PlaceMapResponse::from)
+                                .map(place -> PlaceMapResponse.from(
+                                                place,
+                                                includeOperationalData))
                                 .toList();
         }
 
         // =====================================================
         // FILTRO POR ZONAL
-        // LEGACY
         // =====================================================
 
         @Transactional(readOnly = true)
         public List<PlaceMapResponse> getPlacesByZonal(
-                        String zonal) {
+                        String zonal,
+                        Authentication authentication) {
 
                 if (zonal == null ||
                                 zonal.trim().isBlank()) {
 
                         return List.of();
                 }
+
+                User authenticatedUser = getAuthenticatedUser(authentication);
+
+                boolean includeOperationalData = canViewOperationalData(
+                                authenticatedUser);
 
                 Pageable pageable = PageRequest.of(
                                 0,
@@ -410,12 +489,14 @@ public class PlaceService {
                                                 zonal.trim(),
                                                 pageable)
                                 .stream()
-                                .map(PlaceMapResponse::from)
+                                .map(place -> PlaceMapResponse.from(
+                                                place,
+                                                includeOperationalData))
                                 .toList();
         }
 
         // =====================================================
-        // CREAR PLACE
+        // CREAR SITIO
         // =====================================================
 
         @Transactional
@@ -426,58 +507,62 @@ public class PlaceService {
                                 .getContext()
                                 .getAuthentication();
 
-                if (authentication == null ||
-                                !(authentication.getPrincipal() instanceof User authenticatedUser)) {
+                User authenticatedUser = getAuthenticatedUser(authentication);
 
-                        throw new SecurityException(
-                                        "No se pudo identificar al usuario autenticado");
-                }
+                // =================================================
+                // VALIDAR ROL
+                // =================================================
 
-                if (authenticatedUser.getRole() != Role.ESTABLISHMENT) {
+                if (authenticatedUser.getRole() != Role.OPERADOR_FLNOC
+                                &&
+                                authenticatedUser.getRole() != Role.SUPERVISOR
+                                &&
+                                authenticatedUser.getRole() != Role.ADMIN) {
 
                         throw new AccessDeniedException(
-                                        "Solo los establecimientos pueden registrar un lugar");
+                                        "El usuario no tiene permisos para registrar sitios");
                 }
+
+                // =================================================
+                // VALIDAR REQUEST
+                // =================================================
 
                 if (request == null) {
 
                         throw new IllegalArgumentException(
-                                        "Los datos del establecimiento son obligatorios");
+                                        "Los datos del sitio son obligatorios");
                 }
 
                 if (request.name() == null ||
                                 request.name().isBlank()) {
 
                         throw new IllegalArgumentException(
-                                        "El nombre del establecimiento es obligatorio");
+                                        "El nombre del sitio es obligatorio");
                 }
 
                 if (request.address() == null ||
                                 request.address().isBlank()) {
 
                         throw new IllegalArgumentException(
-                                        "La dirección del establecimiento es obligatoria");
+                                        "La dirección del sitio es obligatoria");
                 }
 
                 if (request.latitude() == null ||
                                 request.longitude() == null) {
 
                         throw new IllegalArgumentException(
-                                        "La ubicación del establecimiento es obligatoria");
+                                        "La ubicación del sitio es obligatoria");
                 }
 
                 if (request.type() == null) {
 
                         throw new IllegalArgumentException(
-                                        "El tipo de establecimiento es obligatorio");
+                                        "El tipo de sitio es obligatorio");
                 }
 
-                if (placeRepository.existsByOwnerId(
-                                authenticatedUser.getId())) {
-
-                        throw new IllegalArgumentException(
-                                        "El usuario ya tiene un establecimiento registrado");
-                }
+                // =================================================
+                // CREAR SITIO
+                // =================================================
 
                 Place place = Place.builder()
 
@@ -575,26 +660,94 @@ public class PlaceService {
         }
 
         // =====================================================
+        // VALIDAR ACCESO A INFORMACIÓN OPERACIONAL
+        // =====================================================
+
+        private boolean canViewOperationalData(
+                        Role role) {
+
+                return role == Role.OPERADOR_FLNOC
+                                ||
+                                role == Role.SUPERVISOR
+                                ||
+                                role == Role.ADMIN;
+        }
+
+        // =====================================================
+        // VALIDAR ACCESO A INFORMACIÓN OPERACIONAL
+        // =====================================================
+
+        private boolean canViewOperationalData(
+                        User user) {
+
+                if (user == null ||
+                                user.getRole() == null) {
+
+                        return false;
+                }
+
+                return user.getRole() == Role.OPERADOR_FLNOC
+                                ||
+                                user.getRole() == Role.SUPERVISOR
+                                ||
+                                user.getRole() == Role.ADMIN;
+        }
+
+        // =====================================================
+        // OBTENER USUARIO AUTENTICADO
+        // =====================================================
+
+        private User getAuthenticatedUser(
+                        Authentication authentication) {
+
+                if (authentication == null ||
+                                !authentication.isAuthenticated() ||
+                                !(authentication.getPrincipal() instanceof User authenticatedUser)) {
+
+                        throw new SecurityException(
+                                        "No se pudo identificar al usuario autenticado");
+                }
+
+                return authenticatedUser;
+        }
+
+        // =====================================================
         // CONVERSIÓN PAGINADA
         // =====================================================
 
         private PlaceSearchResponse toSearchResponse(
-                        Page<Place> places) {
+                        List<Place> places,
+                        int page,
+                        int size) {
+
+                List<PlaceResponse> content = places.stream()
+                                .map(PlaceResponse::from)
+                                .toList();
+
+                long totalElements;
+
+                int totalPages;
+
+                if (places.size() < size) {
+
+                        totalElements = ((long) page * size)
+                                        + places.size();
+
+                        totalPages = page + 1;
+
+                } else {
+
+                        totalElements = ((long) (page + 1) * size);
+
+                        totalPages = page + 2;
+                }
 
                 return new PlaceSearchResponse(
-
-                                places.getContent()
-                                                .stream()
-                                                .map(PlaceResponse::from)
-                                                .toList(),
-
-                                places.getNumber(),
-
-                                places.getSize(),
-
-                                places.getTotalElements(),
-
-                                places.getTotalPages());
+                                content,
+                                page,
+                                size,
+                                totalElements,
+                                totalPages);
         }
 
         // =====================================================
@@ -611,7 +764,8 @@ public class PlaceService {
                                         "La página no puede ser negativa");
                 }
 
-                if (size < 1 || size > 1000) {
+                if (size < 1 ||
+                                size > 1000) {
 
                         throw new IllegalArgumentException(
                                         "El tamaño de página debe estar entre 1 y 1000");

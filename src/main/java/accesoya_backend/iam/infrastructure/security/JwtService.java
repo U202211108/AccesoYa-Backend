@@ -29,15 +29,30 @@ public class JwtService {
     public String generateToken(User user) {
 
         Instant now = Instant.now();
+
         Instant expiration = now.plusMillis(expirationMs);
 
         return Jwts.builder()
-                .subject(user.getId().toString())
-                .claim("email", user.getEmail())
-                .claim("role", user.getRole().name())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expiration))
+
+                .subject(
+                        user.getId().toString())
+
+                .claim(
+                        "email",
+                        user.getEmail())
+
+                .claim(
+                        "role",
+                        user.getRole().name())
+
+                .issuedAt(
+                        Date.from(now))
+
+                .expiration(
+                        Date.from(expiration))
+
                 .signWith(secretKey)
+
                 .compact();
     }
 

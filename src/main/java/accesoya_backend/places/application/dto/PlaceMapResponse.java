@@ -49,10 +49,39 @@ public record PlaceMapResponse(
 
 ) {
 
+        // =====================================================
+        // CONVERSIÓN PLACE → RESPUESTA DEL MAPA
+        // =====================================================
+
         public static PlaceMapResponse from(
-                        Place place) {
+                        Place place,
+                        boolean includeOperationalData) {
+
+                FlmNocResponse flmNoc = null;
+
+                // =================================================
+                // INFORMACIÓN OPERACIONAL FLM / NOC
+                // =================================================
+                //
+                // CONSULTOR:
+                // flmNoc = null
+                //
+                // OPERADOR_FLNOC / SUPERVISOR / ADMIN:
+                // se incluye la información FLM/NOC cuando existe.
+                // =================================================
+
+                if (includeOperationalData
+                                && place.getFlmNocData() != null) {
+
+                        flmNoc = FlmNocResponse.from(
+                                        place.getFlmNocData());
+                }
 
                 return new PlaceMapResponse(
+
+                                // =================================================
+                                // INFORMACIÓN DEL PLACE
+                                // =================================================
 
                                 place.getId(),
 
@@ -90,7 +119,10 @@ public record PlaceMapResponse(
 
                                 place.getEstablishmentType(),
 
-                                FlmNocResponse.from(
-                                                place.getFlmNocData()));
+                                // =================================================
+                                // INFORMACIÓN OPERACIONAL
+                                // =================================================
+
+                                flmNoc);
         }
 }

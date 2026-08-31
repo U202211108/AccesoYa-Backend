@@ -62,7 +62,15 @@ public record PlaceResponse(
 
 ) {
 
+    // =====================================================
+    // CONVERTIR PLACE → PLACE RESPONSE
+    // =====================================================
+
     public static PlaceResponse from(Place place) {
+
+        if (place == null) {
+            return null;
+        }
 
         return new PlaceResponse(
 

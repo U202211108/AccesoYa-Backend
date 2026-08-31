@@ -2,10 +2,8 @@ package accesoya_backend.places.domain.repository;
 
 import accesoya_backend.places.domain.model.Place;
 import accesoya_backend.places.domain.model.PlaceSource;
-import accesoya_backend.places.domain.model.PlaceStatus;
 import accesoya_backend.places.domain.model.PlaceType;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -26,40 +24,40 @@ public interface PlaceRepository
                         String externalId,
                         PlaceSource source);
 
-        Page<Place> findByNameContainingIgnoreCase(
+        // =====================================================
+        // BÚSQUEDA POR NOMBRE
+        // =====================================================
+
+        List<Place> findByNameContainingIgnoreCase(
                         String name,
                         Pageable pageable);
 
-        Page<Place> findByNameContainingIgnoreCaseAndFlmNocDataIsNotNull(
+        List<Place> findByNameContainingIgnoreCaseAndFlmNocDataIsNotNull(
                         String name,
                         Pageable pageable);
 
-        Page<Place> findByType(
+        // =====================================================
+        // BÚSQUEDA POR TIPO
+        // =====================================================
+
+        List<Place> findByType(
                         PlaceType type,
                         Pageable pageable);
 
-        Page<Place> findByTypeAndFlmNocDataIsNotNull(
+        List<Place> findByTypeAndFlmNocDataIsNotNull(
                         PlaceType type,
                         Pageable pageable);
 
         // =====================================================
-        // PROPIETARIO
+        // PROPIETARIO / USUARIO GESTOR
         // =====================================================
 
         Optional<Place> findByIdAndOwnerId(
                         UUID placeId,
                         UUID ownerId);
 
-        boolean existsByOwnerId(
-                        UUID ownerId);
-
         List<Place> findByOwnerId(
                         UUID ownerId);
-
-        Page<Place> findByNameContainingIgnoreCaseAndOwnerIsNullAndStatus(
-                        String name,
-                        PlaceStatus status,
-                        Pageable pageable);
 
         // =====================================================
         // FLM / NOC
@@ -99,18 +97,16 @@ public interface PlaceRepository
         List<String> findDistinctTecnologias();
 
         // =====================================================
-        // MAPA FLM / NOC
+        // MAPA
         // =====================================================
 
         @Query("""
                         SELECT p
                         FROM Place p
-                        LEFT JOIN FETCH p.flmNocData f
                         WHERE p.latitude BETWEEN :minLatitude AND :maxLatitude
                           AND p.longitude BETWEEN :minLongitude AND :maxLongitude
                           AND p.status =
                               accesoya_backend.places.domain.model.PlaceStatus.ACTIVE
-                          AND f IS NOT NULL
                         """)
         List<Place> findPlacesInBoundingBox(
                         @Param("minLatitude") Double minLatitude,
@@ -129,8 +125,6 @@ public interface PlaceRepository
                         LEFT JOIN p.flmNocData f
                         WHERE p.status =
                             accesoya_backend.places.domain.model.PlaceStatus.ACTIVE
-
-                          AND f IS NOT NULL
 
                           AND (
                                 LOWER(p.name)
@@ -272,19 +266,22 @@ public interface PlaceRepository
                           AND (
                                 :tipoEstacion IS NULL
                                 OR TRIM(:tipoEstacion) = ''
-                                OR LOWER(f.tipoEstacion) = LOWER(:tipoEstacion)
+                                OR LOWER(f.tipoEstacion) =
+                                   LOWER(:tipoEstacion)
                               )
 
                           AND (
                                 :zonal IS NULL
                                 OR TRIM(:zonal) = ''
-                                OR LOWER(f.zonal) = LOWER(:zonal)
+                                OR LOWER(f.zonal) =
+                                   LOWER(:zonal)
                               )
 
                           AND (
                                 :tecnologia IS NULL
                                 OR TRIM(:tecnologia) = ''
-                                OR LOWER(f.tecnologia) = LOWER(:tecnologia)
+                                OR LOWER(f.tecnologia) =
+                                   LOWER(:tecnologia)
                               )
                         """)
         List<Place> findFlmNocByFilters(

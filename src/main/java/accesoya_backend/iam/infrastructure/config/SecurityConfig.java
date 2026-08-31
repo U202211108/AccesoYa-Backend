@@ -1,6 +1,7 @@
 package accesoya_backend.iam.infrastructure.config;
 
 import accesoya_backend.iam.infrastructure.security.JwtAuthenticationFilter;
+
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -29,6 +30,10 @@ public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+        // =====================================================
+        // SECURITY FILTER CHAIN
+        // =====================================================
+
         @Bean
         public SecurityFilterChain securityFilterChain(
                         HttpSecurity http) throws Exception {
@@ -51,9 +56,15 @@ public class SecurityConfig {
                                 // =====================================================
                                 // SESIONES
                                 // =====================================================
+                                //
+                                // La aplicación utiliza JWT.
+                                // No se utiliza sesión HTTP.
+                                //
+                                // =====================================================
 
-                                .sessionManagement(session -> session.sessionCreationPolicy(
-                                                SessionCreationPolicy.STATELESS))
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(
+                                                                SessionCreationPolicy.STATELESS))
 
                                 // =====================================================
                                 // AUTORIZACIÓN
@@ -71,31 +82,42 @@ public class SecurityConfig {
                                                 .permitAll()
 
                                                 // -------------------------------------------------
-                                                // AUTENTICACIÓN
+                                                // AUTENTICACIÓN PÚBLICA
+                                                // -------------------------------------------------
+                                                //
+                                                // Registro y login NO requieren JWT.
+                                                //
                                                 // -------------------------------------------------
 
                                                 .requestMatchers(
+                                                                HttpMethod.POST,
                                                                 "/api/auth/register",
                                                                 "/api/auth/login")
                                                 .permitAll()
 
                                                 // -------------------------------------------------
-                                                // MAPA PÚBLICO
-                                                // -------------------------------------------------
-
-                                                .requestMatchers(
-                                                                "/api/places/map",
-                                                                "/api/places/map/search")
-                                                .permitAll()
-
-                                                // -------------------------------------------------
-                                                // SWAGGER
+                                                // SWAGGER / OPENAPI
                                                 // -------------------------------------------------
 
                                                 .requestMatchers(
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
                                                                 "/v3/api-docs/**")
+                                                .permitAll()
+
+                                                // -------------------------------------------------
+                                                // MAPA PÚBLICO
+                                                // -------------------------------------------------
+                                                //
+                                                // La consulta pública del mapa no requiere
+                                                // autenticación.
+                                                //
+                                                // -------------------------------------------------
+
+                                                .requestMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/places/map",
+                                                                "/api/places/map/search")
                                                 .permitAll()
 
                                                 // -------------------------------------------------
@@ -118,19 +140,35 @@ public class SecurityConfig {
                                                 // -------------------------------------------------
                                                 // RESTO DE LA API
                                                 // -------------------------------------------------
+                                                //
+                                                // Todo endpoint /api/** requiere autenticación.
+                                                //
+                                                // La autorización por rol se controla mediante
+                                                // @PreAuthorize en los controladores/servicios
+                                                // correspondientes.
+                                                //
+                                                // Roles:
+                                                //
+                                                // CONSULTOR
+                                                // OPERADOR_FLNOC
+                                                // SUPERVISOR
+                                                // ADMIN
+                                                //
+                                                // -------------------------------------------------
 
                                                 .requestMatchers(
                                                                 "/api/**")
                                                 .authenticated()
 
                                                 // -------------------------------------------------
-                                                // RESTO
+                                                // RESTO DE RUTAS
                                                 // -------------------------------------------------
 
-                                                .anyRequest().denyAll())
+                                                .anyRequest()
+                                                .denyAll())
 
                                 // =====================================================
-                                // JWT FILTER
+                                // JWT AUTHENTICATION FILTER
                                 // =====================================================
 
                                 .addFilterBefore(
@@ -141,7 +179,7 @@ public class SecurityConfig {
         }
 
         // =====================================================
-        // CORS
+        // CORS CONFIGURATION
         // =====================================================
 
         @Bean
@@ -149,9 +187,17 @@ public class SecurityConfig {
 
                 CorsConfiguration configuration = new CorsConfiguration();
 
+                // -------------------------------------------------
+                // FRONTEND ANGULAR
+                // -------------------------------------------------
+
                 configuration.setAllowedOrigins(
                                 List.of(
                                                 "http://localhost:4200"));
+
+                // -------------------------------------------------
+                // MÉTODOS HTTP
+                // -------------------------------------------------
 
                 configuration.setAllowedMethods(
                                 List.of(
@@ -162,17 +208,33 @@ public class SecurityConfig {
                                                 "DELETE",
                                                 "OPTIONS"));
 
+                // -------------------------------------------------
+                // HEADERS
+                // -------------------------------------------------
+
                 configuration.setAllowedHeaders(
                                 List.of(
                                                 "Authorization",
                                                 "Content-Type",
                                                 "Accept"));
 
+                // -------------------------------------------------
+                // HEADERS EXPUESTOS
+                // -------------------------------------------------
+
                 configuration.setExposedHeaders(
                                 List.of(
                                                 "Authorization"));
 
+                // -------------------------------------------------
+                // CREDENTIALS
+                // -------------------------------------------------
+
                 configuration.setAllowCredentials(true);
+
+                // -------------------------------------------------
+                // REGISTRAR CONFIGURACIÓN
+                // -------------------------------------------------
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 

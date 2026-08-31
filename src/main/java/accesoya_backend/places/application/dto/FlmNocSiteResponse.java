@@ -7,175 +7,196 @@ import java.util.UUID;
 
 public record FlmNocSiteResponse(
 
-        // =====================================================
-        // PLACE
-        // =====================================================
+                // =====================================================
+                // PLACE - INFORMACIÓN GENERAL
+                // =====================================================
 
-        UUID id,
+                UUID id,
 
-        String externalId,
+                String externalId,
 
-        String name,
+                String name,
 
-        String address,
+                String address,
 
-        String department,
+                String department,
 
-        String province,
+                String province,
 
-        String district,
+                String district,
 
-        String ubigeo,
+                String ubigeo,
 
-        Double latitude,
+                Double latitude,
 
-        Double longitude,
+                Double longitude,
 
-        String category,
+                String category,
 
-        String classification,
+                String classification,
 
-        String establishmentType,
+                String establishmentType,
 
-        String sourceStatus,
+                String sourceStatus,
 
-        String status,
+                String status,
 
-        // =====================================================
-        // FLM / NOC
-        // =====================================================
+                // =====================================================
+                // FLM / NOC - INFORMACIÓN OPERATIVA
+                // =====================================================
 
-        String nombreEnCal,
+                String nombreEnCal,
 
-        String nombreControlCentral,
+                String nombreControlCentral,
 
-        String numeroLineaComunicacion,
+                String numeroLineaComunicacion,
 
-        String localRecojoLlaves,
+                String localRecojoLlaves,
 
-        String codigoEmplazamiento,
+                String codigoEmplazamiento,
 
-        String zonal,
+                String zonal,
 
-        String propietarioTorre,
+                String propietarioTorre,
 
-        String clasificacionPropietarioTorre,
+                String clasificacionPropietarioTorre,
 
-        String coberturaReaccion,
+                String coberturaReaccion,
 
-        String patrullaje,
+                String patrullaje,
 
-        String guardiania,
+                String guardiania,
 
-        String vigilancia,
+                String vigilancia,
 
-        String rondaDinamica,
+                String rondaDinamica,
 
-        String monitoreoCsi
+                String monitoreoCsi
 
 ) {
 
-    public static FlmNocSiteResponse from(
-            Place place) {
+        // =====================================================
+        // CONVERSIÓN SEGURA
+        // =====================================================
 
-        FlmNocData flm = place.getFlmNocData();
+        public static FlmNocSiteResponse from(
+                        Place place,
+                        boolean includeOperationalData) {
 
-        return new FlmNocSiteResponse(
+                if (place == null) {
+                        return null;
+                }
 
-                // =================================================
-                // PLACE
-                // =================================================
+                FlmNocData flm = place.getFlmNocData();
 
-                place.getId(),
+                return new FlmNocSiteResponse(
 
-                place.getExternalId(),
+                                // =================================================
+                                // PLACE
+                                // =================================================
 
-                place.getName(),
+                                place.getId(),
 
-                place.getAddress(),
+                                place.getExternalId(),
 
-                place.getDepartment(),
+                                place.getName(),
 
-                place.getProvince(),
+                                place.getAddress(),
 
-                place.getDistrict(),
+                                place.getDepartment(),
 
-                place.getUbigeo(),
+                                place.getProvince(),
 
-                place.getLatitude(),
+                                place.getDistrict(),
 
-                place.getLongitude(),
+                                place.getUbigeo(),
 
-                place.getCategory(),
+                                place.getLatitude(),
 
-                place.getClassification(),
+                                place.getLongitude(),
 
-                place.getEstablishmentType(),
+                                place.getCategory(),
 
-                place.getSourceStatus(),
+                                place.getClassification(),
 
-                place.getStatus() != null
-                        ? place.getStatus().name()
-                        : null,
+                                place.getEstablishmentType(),
 
-                // =================================================
-                // FLM / NOC
-                // =================================================
+                                place.getSourceStatus(),
 
-                flm != null
-                        ? flm.getNombreEnCal()
-                        : null,
+                                place.getStatus() != null
+                                                ? place.getStatus().name()
+                                                : null,
 
-                flm != null
-                        ? flm.getNombreControlCentral()
-                        : null,
+                                // =================================================
+                                // FLM / NOC
+                                // =================================================
+                                // Si el usuario no tiene permisos operativos,
+                                // TODOS estos campos permanecen en null.
 
-                flm != null
-                        ? flm.getNumeroLineaComunicacion()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getNombreEnCal()
+                                                : null,
 
-                flm != null
-                        ? flm.getLocalRecojoLlaves()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getNombreControlCentral()
+                                                : null,
 
-                flm != null
-                        ? flm.getCodigoEmplazamiento()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getNumeroLineaComunicacion()
+                                                : null,
 
-                flm != null
-                        ? flm.getZonal()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getLocalRecojoLlaves()
+                                                : null,
 
-                flm != null
-                        ? flm.getPropietarioTorre()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getCodigoEmplazamiento()
+                                                : null,
 
-                flm != null
-                        ? flm.getClasificacionPropietarioTorre()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getZonal()
+                                                : null,
 
-                flm != null
-                        ? flm.getCoberturaReaccion()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getPropietarioTorre()
+                                                : null,
 
-                flm != null
-                        ? flm.getPatrullaje()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getClasificacionPropietarioTorre()
+                                                : null,
 
-                flm != null
-                        ? flm.getGuardiania()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getCoberturaReaccion()
+                                                : null,
 
-                flm != null
-                        ? flm.getVigilancia()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getPatrullaje()
+                                                : null,
 
-                flm != null
-                        ? flm.getRondaDinamica()
-                        : null,
+                                includeOperationalData && flm != null
+                                                ? flm.getGuardiania()
+                                                : null,
 
-                flm != null
-                        ? flm.getMonitoreoCsi()
-                        : null);
-    }
+                                includeOperationalData && flm != null
+                                                ? flm.getVigilancia()
+                                                : null,
+
+                                includeOperationalData && flm != null
+                                                ? flm.getRondaDinamica()
+                                                : null,
+
+                                includeOperationalData && flm != null
+                                                ? flm.getMonitoreoCsi()
+                                                : null);
+        }
+
+        // =====================================================
+        // COMPATIBILIDAD
+        // =====================================================
+
+        public static FlmNocSiteResponse from(
+                        Place place) {
+
+                return from(place, true);
+        }
 }

@@ -5,7 +5,8 @@ import jakarta.validation.constraints.NotNull;
 
 public record UpdateUserRoleRequest(
 
-        @NotNull(message = "El rol es obligatorio") Role role
+        @NotNull(message = "El rol es obligatorio")
+        Role role
 
 ) {
 }

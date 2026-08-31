@@ -15,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 
 import org.springframework.web.bind.annotation.*;
@@ -34,9 +35,17 @@ public class PlanDocumentController {
 
         // =====================================================
         // LISTAR PLANOS
+        // OPERADOR + SUPERVISOR + ADMIN
         // =====================================================
 
         @GetMapping
+        @PreAuthorize("""
+                        hasAnyRole(
+                                'OPERADOR_FLNOC',
+                                'SUPERVISOR',
+                                'ADMIN'
+                        )
+                        """)
         @Operation(summary = "Obtener planos de un sitio")
         public ResponseEntity<List<PlanDocumentResponse>> getPlans(
 
@@ -51,9 +60,17 @@ public class PlanDocumentController {
 
         // =====================================================
         // SUBIR PLANO
+        // OPERADOR + SUPERVISOR + ADMIN
         // =====================================================
 
         @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @PreAuthorize("""
+                        hasAnyRole(
+                                'OPERADOR_FLNOC',
+                                'SUPERVISOR',
+                                'ADMIN'
+                        )
+                        """)
         @Operation(summary = "Subir un plano")
         public ResponseEntity<PlanDocumentResponse> uploadPlan(
 
@@ -64,27 +81,6 @@ public class PlanDocumentController {
                         Authentication authentication
 
         ) {
-
-                System.out.println(
-                                "========================================");
-
-                System.out.println(
-                                "UPLOAD PLAN");
-
-                System.out.println(
-                                "Usuario autenticado: "
-                                                + authentication.getName());
-
-                System.out.println(
-                                "Principal: "
-                                                + authentication.getPrincipal());
-
-                System.out.println(
-                                "Authorities: "
-                                                + authentication.getAuthorities());
-
-                System.out.println(
-                                "========================================");
 
                 return ResponseEntity.ok(
 
@@ -99,9 +95,17 @@ public class PlanDocumentController {
 
         // =====================================================
         // VISUALIZAR / DESCARGAR
+        // OPERADOR + SUPERVISOR + ADMIN
         // =====================================================
 
         @GetMapping("/{planId}")
+        @PreAuthorize("""
+                        hasAnyRole(
+                                'OPERADOR_FLNOC',
+                                'SUPERVISOR',
+                                'ADMIN'
+                        )
+                        """)
         @Operation(summary = "Obtener un plano")
         public ResponseEntity<byte[]> getPlan(
 
@@ -112,9 +116,7 @@ public class PlanDocumentController {
         ) {
 
                 PlanDocument document = planDocumentService.getPlan(
-
                                 placeId,
-
                                 planId);
 
                 MediaType mediaType;
@@ -131,21 +133,16 @@ public class PlanDocumentController {
 
                 return ResponseEntity.ok()
 
-                                .contentType(
-                                                mediaType)
+                                .contentType(mediaType)
 
                                 .contentLength(
                                                 document.getFileSize())
 
                                 .header(
-
                                                 HttpHeaders.CONTENT_DISPOSITION,
-
                                                 "inline; filename=\"" +
                                                                 document.getFileName() +
-                                                                "\""
-
-                                )
+                                                                "\"")
 
                                 .body(
                                                 document.getFileData());
@@ -153,10 +150,21 @@ public class PlanDocumentController {
 
         // =====================================================
         // VISTA PREVIA
+        // OPERADOR + SUPERVISOR + ADMIN
         // =====================================================
 
         @GetMapping("/{planId}/preview")
-        @Operation(summary = "Generar vista previa de un plano", description = "Convierte temporalmente documentos Word y Excel a PDF para visualización")
+        @PreAuthorize("""
+                        hasAnyRole(
+                                'OPERADOR_FLNOC',
+                                'SUPERVISOR',
+                                'ADMIN'
+                        )
+                        """)
+        @Operation(summary = "Generar vista previa de un plano", description = """
+                        Convierte temporalmente documentos Word
+                        y Excel a PDF para visualización.
+                        """)
         public ResponseEntity<byte[]> previewPlan(
 
                         @PathVariable UUID placeId,
@@ -167,49 +175,38 @@ public class PlanDocumentController {
 
         ) {
 
-                System.out.println("========================================");
-                System.out.println("PREVIEW PLAN");
-                System.out.println("Usuario autenticado: "
-                                + (authentication != null
-                                                ? authentication.getName()
-                                                : "NULL"));
-
-                System.out.println("Authenticated: "
-                                + (authentication != null
-                                                && authentication.isAuthenticated()));
-
-                System.out.println("Principal: "
-                                + (authentication != null
-                                                ? authentication.getPrincipal()
-                                                : "NULL"));
-
-                System.out.println("Authorities: "
-                                + (authentication != null
-                                                ? authentication.getAuthorities()
-                                                : "NULL"));
-
-                System.out.println("Place: " + placeId);
-                System.out.println("Plan: " + planId);
-                System.out.println("========================================");
-
                 byte[] pdf = planDocumentService.generatePreview(
                                 placeId,
                                 planId);
 
                 return ResponseEntity.ok()
-                                .contentType(MediaType.APPLICATION_PDF)
-                                .contentLength(pdf.length)
+
+                                .contentType(
+                                                MediaType.APPLICATION_PDF)
+
+                                .contentLength(
+                                                pdf.length)
+
                                 .header(
                                                 HttpHeaders.CONTENT_DISPOSITION,
                                                 "inline; filename=\"preview.pdf\"")
+
                                 .body(pdf);
         }
 
         // =====================================================
         // ELIMINAR
+        // OPERADOR + SUPERVISOR + ADMIN
         // =====================================================
 
         @DeleteMapping("/{planId}")
+        @PreAuthorize("""
+                        hasAnyRole(
+                                'OPERADOR_FLNOC',
+                                'SUPERVISOR',
+                                'ADMIN'
+                        )
+                        """)
         @Operation(summary = "Eliminar un plano")
         public ResponseEntity<Void> deletePlan(
 
@@ -220,27 +217,6 @@ public class PlanDocumentController {
                         Authentication authentication
 
         ) {
-
-                System.out.println(
-                                "========================================");
-
-                System.out.println(
-                                "DELETE PLAN");
-
-                System.out.println(
-                                "Usuario autenticado: "
-                                                + authentication.getName());
-
-                System.out.println(
-                                "Principal: "
-                                                + authentication.getPrincipal());
-
-                System.out.println(
-                                "Authorities: "
-                                                + authentication.getAuthorities());
-
-                System.out.println(
-                                "========================================");
 
                 planDocumentService.deletePlan(
 

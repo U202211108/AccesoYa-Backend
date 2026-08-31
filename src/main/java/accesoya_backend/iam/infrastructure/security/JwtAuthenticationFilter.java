@@ -240,21 +240,27 @@ public class JwtAuthenticationFilter
 
                         String authorityName = "ROLE_" + role;
 
-                        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(
-                                        authorityName);
-
                         System.out.println(
                                         "JWT: Authority creada: " +
                                                         authorityName);
 
-                        // =================================================
-                        // CREAR AUTHENTICATION
-                        // =================================================
+                        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(
+                                        "ROLE_" + role);
 
-                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                                        user,
-                                        null,
-                                        List.of(authority));
+                        UsernamePasswordAuthenticationToken authentication =
+
+                                        new UsernamePasswordAuthenticationToken(
+
+                                                        user,
+
+                                                        null,
+
+                                                        List.of(authority));
+
+                        SecurityContextHolder
+                                        .getContext()
+                                        .setAuthentication(
+                                                        authentication);
 
                         // =================================================
                         // GUARDAR EN SECURITY CONTEXT

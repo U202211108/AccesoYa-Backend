@@ -7,16 +7,21 @@ import accesoya_backend.iam.application.dto.UpdateProfileRequest;
 import accesoya_backend.iam.application.dto.UpdateUserRoleRequest;
 import accesoya_backend.iam.application.dto.UpdateUserStatusRequest;
 import accesoya_backend.iam.application.dto.UserResponse;
+
 import accesoya_backend.iam.domain.model.Role;
 import accesoya_backend.iam.domain.model.User;
 import accesoya_backend.iam.domain.model.UserStatus;
 import accesoya_backend.iam.domain.repository.UserRepository;
+
+import accesoya_backend.iam.infrastructure.security.JwtService;
+
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import accesoya_backend.iam.infrastructure.security.JwtService;
-import org.springframework.security.core.Authentication;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -25,8 +30,14 @@ import java.util.UUID;
 public class UserService {
 
         private final UserRepository userRepository;
+
         private final PasswordEncoder passwordEncoder;
+
         private final JwtService jwtService;
+
+        // =====================================================
+        // REGISTRO
+        // =====================================================
 
         @Transactional
         public UserResponse register(RegisterRequest request) {
@@ -45,7 +56,15 @@ public class UserService {
                                 .lastName(request.lastName().trim())
                                 .email(normalizedEmail)
                                 .password(passwordEncoder.encode(request.password()))
-                                .role(Role.USER)
+
+                                // =============================================
+                                // TODO NUEVO USUARIO
+                                // =============================================
+                                // Todo usuario registrado comienza como CONSULTOR.
+                                // Solo un ADMIN puede elevar posteriormente
+                                // su nivel de acceso.
+                                .role(Role.CONSULTOR)
+
                                 .status(UserStatus.ACTIVE)
                                 .build();
 
@@ -54,18 +73,26 @@ public class UserService {
                 return UserResponse.from(savedUser);
         }
 
+        // =====================================================
+        // LOGIN
+        // =====================================================
+
         @Transactional(readOnly = true)
-        public AuthResponse login(LoginRequest request) {
+        public AuthResponse login(
+                        LoginRequest request) {
 
                 String normalizedEmail = request.email()
                                 .trim()
                                 .toLowerCase();
 
-                User user = userRepository.findByEmail(normalizedEmail)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Credenciales inválidas"));
+                User user = userRepository
+                                .findByEmail(normalizedEmail)
+                                .orElseThrow(
+                                                () -> new IllegalArgumentException(
+                                                                "Credenciales inválidas"));
 
                 if (user.getStatus() != UserStatus.ACTIVE) {
+
                         throw new IllegalArgumentException(
                                         "El usuario se encuentra inactivo");
                 }
@@ -73,6 +100,7 @@ public class UserService {
                 if (!passwordEncoder.matches(
                                 request.password(),
                                 user.getPassword())) {
+
                         throw new IllegalArgumentException(
                                         "Credenciales inválidas");
                 }
@@ -80,11 +108,17 @@ public class UserService {
                 String token = jwtService.generateToken(user);
 
                 return new AuthResponse(
+
                                 token,
+
                                 user.getId(),
+
                                 user.getFirstName(),
+
                                 user.getLastName(),
+
                                 user.getEmail(),
+
                                 user.getRole());
         }
 
@@ -106,9 +140,11 @@ public class UserService {
                 User authenticatedUser = (User) authentication.getPrincipal();
 
                 User user = userRepository
-                                .findById(authenticatedUser.getId())
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Usuario no encontrado"));
+                                .findById(
+                                                authenticatedUser.getId())
+                                .orElseThrow(
+                                                () -> new IllegalArgumentException(
+                                                                "Usuario no encontrado"));
 
                 if (user.getStatus() != UserStatus.ACTIVE) {
 
@@ -119,13 +155,23 @@ public class UserService {
                 String token = jwtService.generateToken(user);
 
                 return new AuthResponse(
+
                                 token,
+
                                 user.getId(),
+
                                 user.getFirstName(),
+
                                 user.getLastName(),
+
                                 user.getEmail(),
+
                                 user.getRole());
         }
+
+        // =====================================================
+        // MI PERFIL
+        // =====================================================
 
         @Transactional(readOnly = true)
         public UserResponse getMyProfile(
@@ -134,12 +180,18 @@ public class UserService {
                 User authenticatedUser = (User) authentication.getPrincipal();
 
                 User user = userRepository
-                                .findById(authenticatedUser.getId())
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Usuario no encontrado"));
+                                .findById(
+                                                authenticatedUser.getId())
+                                .orElseThrow(
+                                                () -> new IllegalArgumentException(
+                                                                "Usuario no encontrado"));
 
                 return UserResponse.from(user);
         }
+
+        // =====================================================
+        // ACTUALIZAR MI PERFIL
+        // =====================================================
 
         @Transactional
         public UserResponse updateMyProfile(
@@ -149,9 +201,11 @@ public class UserService {
                 User authenticatedUser = (User) authentication.getPrincipal();
 
                 User user = userRepository
-                                .findById(authenticatedUser.getId())
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Usuario no encontrado"));
+                                .findById(
+                                                authenticatedUser.getId())
+                                .orElseThrow(
+                                                () -> new IllegalArgumentException(
+                                                                "Usuario no encontrado"));
 
                 user.setFirstName(
                                 request.firstName().trim());
@@ -162,24 +216,43 @@ public class UserService {
                 return UserResponse.from(user);
         }
 
+        // =====================================================
+        // LISTAR USUARIOS
+        // SOLO ADMIN
+        // =====================================================
+
         @Transactional(readOnly = true)
         public List<UserResponse> getAllUsers() {
 
-                return userRepository.findAll()
+                return userRepository
+                                .findAll()
                                 .stream()
                                 .map(UserResponse::from)
                                 .toList();
         }
 
-        @Transactional(readOnly = true)
-        public UserResponse getUserById(UUID id) {
+        // =====================================================
+        // OBTENER USUARIO
+        // SOLO ADMIN
+        // =====================================================
 
-                User user = userRepository.findById(id)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Usuario no encontrado"));
+        @Transactional(readOnly = true)
+        public UserResponse getUserById(
+                        UUID id) {
+
+                User user = userRepository
+                                .findById(id)
+                                .orElseThrow(
+                                                () -> new IllegalArgumentException(
+                                                                "Usuario no encontrado"));
 
                 return UserResponse.from(user);
         }
+
+        // =====================================================
+        // CAMBIAR ROL
+        // SOLO ADMIN
+        // =====================================================
 
         @Transactional
         public UserResponse updateRole(
@@ -187,40 +260,100 @@ public class UserService {
                         UpdateUserRoleRequest request,
                         Authentication authentication) {
 
-                User authenticatedUser = (User) authentication.getPrincipal();
+                if (authentication == null ||
+                                !(authentication.getPrincipal() instanceof User authenticatedUser)) {
+
+                        throw new SecurityException(
+                                        "Usuario no autenticado");
+                }
+
+                // =====================================================
+                // NO PERMITIR QUE EL ADMIN SE MODIFIQUE A SÍ MISMO
+                // =====================================================
 
                 if (authenticatedUser.getId().equals(id)) {
+
                         throw new IllegalArgumentException(
                                         "Un administrador no puede modificar su propio rol");
                 }
 
-                User user = userRepository.findById(id)
+                // =====================================================
+                // BUSCAR USUARIO
+                // =====================================================
+
+                User user = userRepository
+                                .findById(id)
                                 .orElseThrow(() -> new IllegalArgumentException(
                                                 "Usuario no encontrado"));
+
+                // =====================================================
+                // ACTUALIZAR ROL
+                // =====================================================
 
                 user.setRole(request.role());
 
                 return UserResponse.from(user);
         }
 
+        // =====================================================
+        // CAMBIAR ESTADO
+        // SOLO ADMIN
+        // =====================================================
+
         @Transactional
         public UserResponse updateStatus(
+
                         UUID id,
+
                         UpdateUserStatusRequest request,
+
                         Authentication authentication) {
 
                 User authenticatedUser = (User) authentication.getPrincipal();
 
-                if (authenticatedUser.getId().equals(id)) {
+                // -------------------------------------------------
+                // NO MODIFICAR PROPIA CUENTA
+                // -------------------------------------------------
+
+                if (authenticatedUser
+                                .getId()
+                                .equals(id)) {
+
                         throw new IllegalArgumentException(
                                         "Un administrador no puede modificar su propio estado");
                 }
 
-                User user = userRepository.findById(id)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Usuario no encontrado"));
+                User user = userRepository
+                                .findById(id)
+                                .orElseThrow(
+                                                () -> new IllegalArgumentException(
+                                                                "Usuario no encontrado"));
 
-                user.setStatus(request.status());
+                // -------------------------------------------------
+                // PROTEGER ÚLTIMO ADMIN
+                // -------------------------------------------------
+
+                if (
+
+                user.getRole() == Role.ADMIN
+
+                                && user.getStatus() == UserStatus.ACTIVE
+
+                                && request.status() == UserStatus.INACTIVE
+
+                                && userRepository
+                                                .countByRoleAndStatus(
+                                                                Role.ADMIN,
+                                                                UserStatus.ACTIVE) <= 1
+
+                ) {
+
+                        throw new IllegalArgumentException(
+                                        "No se puede desactivar el último administrador activo del sistema");
+                }
+
+                user.setStatus(
+                                request.status());
 
                 return UserResponse.from(user);
         }
