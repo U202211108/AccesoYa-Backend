@@ -2,15 +2,9 @@ package accesoya_backend.notifications.domain.model;
 
 public enum NotificationType {
 
-    ESTABLISHMENT_REQUEST_CREATED,
+    USER_ROLE_CHANGED,
 
-    ESTABLISHMENT_APPROVED,
-
-    ESTABLISHMENT_REJECTED,
-
-    ACCESSIBILITY_UPDATED,
-
-    ESTABLISHMENT_UPDATED,
+    USER_STATUS_CHANGED,
 
     SYSTEM
 }

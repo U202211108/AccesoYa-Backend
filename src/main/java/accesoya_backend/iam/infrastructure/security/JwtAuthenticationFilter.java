@@ -34,14 +34,14 @@ public class JwtAuthenticationFilter
 
         @Override
         protected void doFilterInternal(
-                        HttpServletRequest request,
-                        HttpServletResponse response,
-                        FilterChain filterChain)
-                        throws ServletException, IOException {
 
-                // =====================================================
-                // INFORMACIÓN DE LA PETICIÓN
-                // =====================================================
+                        HttpServletRequest request,
+
+                        HttpServletResponse response,
+
+                        FilterChain filterChain
+
+        ) throws ServletException, IOException {
 
                 String requestUri = request.getRequestURI();
 
@@ -55,7 +55,7 @@ public class JwtAuthenticationFilter
                 System.out.println("========================================");
 
                 // =====================================================
-                // OBTENER AUTHORIZATION HEADER
+                // AUTHORIZATION HEADER
                 // =====================================================
 
                 String authorizationHeader = request.getHeader("Authorization");
@@ -74,7 +74,7 @@ public class JwtAuthenticationFilter
                 }
 
                 // =====================================================
-                // VALIDAR FORMATO BEARER
+                // BEARER
                 // =====================================================
 
                 if (!authorizationHeader.startsWith("Bearer ")) {
@@ -90,7 +90,7 @@ public class JwtAuthenticationFilter
                 }
 
                 // =====================================================
-                // EXTRAER TOKEN
+                // TOKEN
                 // =====================================================
 
                 String token = authorizationHeader.substring(7);
@@ -113,12 +113,7 @@ public class JwtAuthenticationFilter
                         // VALIDAR TOKEN
                         // =================================================
 
-                        System.out.println(
-                                        "JWT: Validando token...");
-
-                        boolean valid = jwtService.isTokenValid(token);
-
-                        if (!valid) {
+                        if (!jwtService.isTokenValid(token)) {
 
                                 System.out.println(
                                                 "JWT: TOKEN INVÁLIDO.");
@@ -136,7 +131,7 @@ public class JwtAuthenticationFilter
                                         "JWT: Token válido.");
 
                         // =================================================
-                        // EXTRAER USER ID
+                        // USER ID
                         // =================================================
 
                         String userId = jwtService.extractUserId(token);
@@ -144,10 +139,6 @@ public class JwtAuthenticationFilter
                         System.out.println(
                                         "JWT: User ID extraído: " +
                                                         userId);
-
-                        // =================================================
-                        // VALIDAR UUID
-                        // =================================================
 
                         UUID uuid;
 
@@ -158,11 +149,7 @@ public class JwtAuthenticationFilter
                         } catch (IllegalArgumentException exception) {
 
                                 System.out.println(
-                                                "JWT ERROR: El subject del token no es un UUID válido.");
-
-                                System.out.println(
-                                                "Valor recibido: " +
-                                                                userId);
+                                                "JWT ERROR: subject inválido.");
 
                                 SecurityContextHolder.clearContext();
 
@@ -184,11 +171,7 @@ public class JwtAuthenticationFilter
                         if (user == null) {
 
                                 System.out.println(
-                                                "JWT ERROR: Usuario no encontrado en BD.");
-
-                                System.out.println(
-                                                "UUID buscado: " +
-                                                                uuid);
+                                                "JWT ERROR: Usuario no encontrado.");
 
                                 SecurityContextHolder.clearContext();
 
@@ -200,28 +183,13 @@ public class JwtAuthenticationFilter
                         }
 
                         // =================================================
-                        // VALIDAR ESTADO
+                        // ESTADO
                         // =================================================
-
-                        System.out.println(
-                                        "JWT: Usuario encontrado.");
-
-                        System.out.println(
-                                        "Email: " +
-                                                        user.getEmail());
-
-                        System.out.println(
-                                        "Estado: " +
-                                                        user.getStatus());
-
-                        System.out.println(
-                                        "Rol: " +
-                                                        user.getRole());
 
                         if (user.getStatus() != UserStatus.ACTIVE) {
 
                                 System.out.println(
-                                                "JWT ERROR: Usuario no está ACTIVE.");
+                                                "JWT ERROR: Usuario INACTIVE.");
 
                                 SecurityContextHolder.clearContext();
 
@@ -233,19 +201,19 @@ public class JwtAuthenticationFilter
                         }
 
                         // =================================================
-                        // CREAR AUTHORITY
+                        // AUTHORITY
                         // =================================================
 
                         String role = user.getRole().name();
 
                         String authorityName = "ROLE_" + role;
 
-                        System.out.println(
-                                        "JWT: Authority creada: " +
-                                                        authorityName);
-
                         SimpleGrantedAuthority authority = new SimpleGrantedAuthority(
-                                        "ROLE_" + role);
+                                        authorityName);
+
+                        // =================================================
+                        // AUTHENTICATION
+                        // =================================================
 
                         UsernamePasswordAuthenticationToken authentication =
 
@@ -263,43 +231,32 @@ public class JwtAuthenticationFilter
                                                         authentication);
 
                         // =================================================
-                        // GUARDAR EN SECURITY CONTEXT
+                        // DEBUG
                         // =================================================
-
-                        SecurityContextHolder
-                                        .getContext()
-                                        .setAuthentication(
-                                                        authentication);
-
-                        // =================================================
-                        // VERIFICACIÓN
-                        // =================================================
-
-                        System.out.println(
-                                        "JWT: Authentication creada correctamente.");
 
                         System.out.println(
                                         "JWT: Usuario autenticado: " +
                                                         user.getEmail());
 
                         System.out.println(
+                                        "JWT: Rol BD: " +
+                                                        role);
+
+                        System.out.println(
                                         "JWT: Authority: " +
                                                         authorityName);
 
                         System.out.println(
-                                        "JWT: SecurityContext contiene Authentication = " +
-                                                        (SecurityContextHolder
-                                                                        .getContext()
-                                                                        .getAuthentication() != null));
+                                        "JWT: Authorities actuales: " +
+                                                        authentication.getAuthorities());
+
+                        System.out.println(
+                                        "JWT: Authentication creada correctamente.");
 
                         System.out.println(
                                         "========================================");
 
                 } catch (Exception exception) {
-
-                        // =================================================
-                        // ERROR REAL
-                        // =================================================
 
                         System.out.println();
                         System.out.println(
@@ -323,10 +280,6 @@ public class JwtAuthenticationFilter
 
                         SecurityContextHolder.clearContext();
                 }
-
-                // =====================================================
-                // CONTINUAR CADENA
-                // =====================================================
 
                 filterChain.doFilter(
                                 request,

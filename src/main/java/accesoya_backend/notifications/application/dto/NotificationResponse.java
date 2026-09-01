@@ -8,43 +8,43 @@ import java.util.UUID;
 
 public record NotificationResponse(
 
-        UUID id,
+                UUID id,
 
-        String title,
+                String title,
 
-        String message,
+                String message,
 
-        NotificationType type,
+                NotificationType type,
 
-        boolean read,
+                boolean read,
 
-        UUID relatedEntityId,
+                UUID relatedEntityId,
 
-        String relatedEntityType,
+                String relatedEntityType,
 
-        LocalDateTime createdAt
+                LocalDateTime createdAt
 
 ) {
 
-    public static NotificationResponse from(
-            Notification notification) {
+        public static NotificationResponse from(
+                        Notification notification) {
 
-        return new NotificationResponse(
+                return new NotificationResponse(
 
-                notification.getId(),
+                                notification.getId(),
 
-                notification.getTitle(),
+                                notification.getTitle(),
 
-                notification.getMessage(),
+                                notification.getMessage(),
 
-                notification.getType(),
+                                notification.getType(),
 
-                notification.isRead(),
+                                notification.isRead(),
 
-                notification.getRelatedEntityId(),
+                                notification.getRelatedEntityId(),
 
-                notification.getRelatedEntityType(),
+                                notification.getRelatedEntityType(),
 
-                notification.getCreatedAt());
-    }
+                                notification.getCreatedAt());
+        }
 }

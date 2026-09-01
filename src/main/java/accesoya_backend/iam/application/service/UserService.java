@@ -14,7 +14,8 @@ import accesoya_backend.iam.domain.model.UserStatus;
 import accesoya_backend.iam.domain.repository.UserRepository;
 
 import accesoya_backend.iam.infrastructure.security.JwtService;
-
+import accesoya_backend.notifications.application.service.NotificationService;
+import accesoya_backend.notifications.domain.model.NotificationType;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.core.Authentication;
@@ -34,6 +35,8 @@ public class UserService {
         private final PasswordEncoder passwordEncoder;
 
         private final JwtService jwtService;
+
+        private final NotificationService notificationService;
 
         // =====================================================
         // REGISTRO
@@ -256,9 +259,14 @@ public class UserService {
 
         @Transactional
         public UserResponse updateRole(
+
                         UUID id,
+
                         UpdateUserRoleRequest request,
-                        Authentication authentication) {
+
+                        Authentication authentication
+
+        ) {
 
                 if (authentication == null ||
                                 !(authentication.getPrincipal() instanceof User authenticatedUser)) {
@@ -283,16 +291,62 @@ public class UserService {
 
                 User user = userRepository
                                 .findById(id)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Usuario no encontrado"));
+                                .orElseThrow(
+                                                () -> new IllegalArgumentException(
+                                                                "Usuario no encontrado"));
 
                 // =====================================================
-                // ACTUALIZAR ROL
+                // VALIDAR SI REALMENTE CAMBIÓ
                 // =====================================================
 
-                user.setRole(request.role());
+                if (user.getRole() == request.role()) {
 
-                return UserResponse.from(user);
+                        return UserResponse.from(user);
+                }
+
+                // =====================================================
+                // GUARDAR NUEVO ROL
+                // =====================================================
+
+                user.setRole(
+                                request.role());
+
+                UserResponse response = UserResponse.from(user);
+
+                // =====================================================
+                // CREAR NOTIFICACIÓN
+                // =====================================================
+
+                notificationService.notifyRoleChanged(
+
+                                user.getId(),
+
+                                request.role());
+
+                return response;
+        }
+
+        private String roleLabel(Role role) {
+
+                if (role == null) {
+
+                        return "Sin rol";
+                }
+
+                return switch (role) {
+
+                        case CONSULTOR ->
+                                "Consultor";
+
+                        case OPERADOR_FLNOC ->
+                                "Operador FLM/NOC";
+
+                        case SUPERVISOR ->
+                                "Supervisor";
+
+                        case ADMIN ->
+                                "Administrador";
+                };
         }
 
         // =====================================================
@@ -307,13 +361,15 @@ public class UserService {
 
                         UpdateUserStatusRequest request,
 
-                        Authentication authentication) {
+                        Authentication authentication
+
+        ) {
 
                 User authenticatedUser = (User) authentication.getPrincipal();
 
-                // -------------------------------------------------
+                // =====================================================
                 // NO MODIFICAR PROPIA CUENTA
-                // -------------------------------------------------
+                // =====================================================
 
                 if (authenticatedUser
                                 .getId()
@@ -323,28 +379,47 @@ public class UserService {
                                         "Un administrador no puede modificar su propio estado");
                 }
 
+                // =====================================================
+                // BUSCAR USUARIO
+                // =====================================================
+
                 User user = userRepository
                                 .findById(id)
+
                                 .orElseThrow(
                                                 () -> new IllegalArgumentException(
                                                                 "Usuario no encontrado"));
 
-                // -------------------------------------------------
+                // =====================================================
+                // VALIDAR SI REALMENTE CAMBIÓ
+                // =====================================================
+
+                if (user.getStatus() == request.status()) {
+
+                        return UserResponse.from(user);
+                }
+
+                // =====================================================
                 // PROTEGER ÚLTIMO ADMIN
-                // -------------------------------------------------
+                // =====================================================
 
                 if (
 
                 user.getRole() == Role.ADMIN
 
-                                && user.getStatus() == UserStatus.ACTIVE
+                                &&
 
-                                && request.status() == UserStatus.INACTIVE
+                                user.getStatus() == UserStatus.ACTIVE
 
-                                && userRepository
-                                                .countByRoleAndStatus(
-                                                                Role.ADMIN,
-                                                                UserStatus.ACTIVE) <= 1
+                                &&
+
+                                request.status() == UserStatus.INACTIVE
+
+                                &&
+
+                                userRepository.countByRoleAndStatus(
+                                                Role.ADMIN,
+                                                UserStatus.ACTIVE) <= 1
 
                 ) {
 
@@ -352,9 +427,25 @@ public class UserService {
                                         "No se puede desactivar el último administrador activo del sistema");
                 }
 
+                // =====================================================
+                // ACTUALIZAR ESTADO
+                // =====================================================
+
                 user.setStatus(
                                 request.status());
 
-                return UserResponse.from(user);
+                UserResponse response = UserResponse.from(user);
+
+                // =====================================================
+                // CREAR NOTIFICACIÓN
+                // =====================================================
+
+                notificationService.notifyStatusChanged(
+
+                                user.getId(),
+
+                                request.status());
+
+                return response;
         }
 }

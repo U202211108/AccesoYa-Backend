@@ -15,6 +15,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -29,10 +30,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-        // =====================================================
-        // SECURITY FILTER CHAIN
-        // =====================================================
 
         @Bean
         public SecurityFilterChain securityFilterChain(
@@ -54,17 +51,11 @@ public class SecurityConfig {
                                 .csrf(csrf -> csrf.disable())
 
                                 // =====================================================
-                                // SESIONES
-                                // =====================================================
-                                //
-                                // La aplicación utiliza JWT.
-                                // No se utiliza sesión HTTP.
-                                //
+                                // SESIÓN
                                 // =====================================================
 
-                                .sessionManagement(session -> session
-                                                .sessionCreationPolicy(
-                                                                SessionCreationPolicy.STATELESS))
+                                .sessionManagement(session -> session.sessionCreationPolicy(
+                                                SessionCreationPolicy.STATELESS))
 
                                 // =====================================================
                                 // AUTORIZACIÓN
@@ -73,7 +64,7 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
 
                                                 // -------------------------------------------------
-                                                // CORS PREFLIGHT
+                                                // PREFLIGHT
                                                 // -------------------------------------------------
 
                                                 .requestMatchers(
@@ -82,11 +73,7 @@ public class SecurityConfig {
                                                 .permitAll()
 
                                                 // -------------------------------------------------
-                                                // AUTENTICACIÓN PÚBLICA
-                                                // -------------------------------------------------
-                                                //
-                                                // Registro y login NO requieren JWT.
-                                                //
+                                                // LOGIN / REGISTRO
                                                 // -------------------------------------------------
 
                                                 .requestMatchers(
@@ -96,7 +83,7 @@ public class SecurityConfig {
                                                 .permitAll()
 
                                                 // -------------------------------------------------
-                                                // SWAGGER / OPENAPI
+                                                // SWAGGER
                                                 // -------------------------------------------------
 
                                                 .requestMatchers(
@@ -107,11 +94,6 @@ public class SecurityConfig {
 
                                                 // -------------------------------------------------
                                                 // MAPA PÚBLICO
-                                                // -------------------------------------------------
-                                                //
-                                                // La consulta pública del mapa no requiere
-                                                // autenticación.
-                                                //
                                                 // -------------------------------------------------
 
                                                 .requestMatchers(
@@ -130,6 +112,14 @@ public class SecurityConfig {
                                                 .authenticated()
 
                                                 // -------------------------------------------------
+                                                // ADMINISTRACIÓN DE USUARIOS
+                                                // -------------------------------------------------
+
+                                                .requestMatchers(
+                                                                "/api/users/**")
+                                                .hasAuthority("ROLE_ADMIN")
+
+                                                // -------------------------------------------------
                                                 // NOTIFICACIONES
                                                 // -------------------------------------------------
 
@@ -138,22 +128,7 @@ public class SecurityConfig {
                                                 .authenticated()
 
                                                 // -------------------------------------------------
-                                                // RESTO DE LA API
-                                                // -------------------------------------------------
-                                                //
-                                                // Todo endpoint /api/** requiere autenticación.
-                                                //
-                                                // La autorización por rol se controla mediante
-                                                // @PreAuthorize en los controladores/servicios
-                                                // correspondientes.
-                                                //
-                                                // Roles:
-                                                //
-                                                // CONSULTOR
-                                                // OPERADOR_FLNOC
-                                                // SUPERVISOR
-                                                // ADMIN
-                                                //
+                                                // RESTO DE API
                                                 // -------------------------------------------------
 
                                                 .requestMatchers(
@@ -161,14 +136,14 @@ public class SecurityConfig {
                                                 .authenticated()
 
                                                 // -------------------------------------------------
-                                                // RESTO DE RUTAS
+                                                // RESTO
                                                 // -------------------------------------------------
 
                                                 .anyRequest()
                                                 .denyAll())
 
                                 // =====================================================
-                                // JWT AUTHENTICATION FILTER
+                                // JWT FILTER
                                 // =====================================================
 
                                 .addFilterBefore(
@@ -179,7 +154,7 @@ public class SecurityConfig {
         }
 
         // =====================================================
-        // CORS CONFIGURATION
+        // CORS
         // =====================================================
 
         @Bean
@@ -187,17 +162,17 @@ public class SecurityConfig {
 
                 CorsConfiguration configuration = new CorsConfiguration();
 
-                // -------------------------------------------------
+                // =====================================================
                 // FRONTEND ANGULAR
-                // -------------------------------------------------
+                // =====================================================
 
                 configuration.setAllowedOrigins(
                                 List.of(
                                                 "http://localhost:4200"));
 
-                // -------------------------------------------------
-                // MÉTODOS HTTP
-                // -------------------------------------------------
+                // =====================================================
+                // MÉTODOS
+                // =====================================================
 
                 configuration.setAllowedMethods(
                                 List.of(
@@ -208,9 +183,9 @@ public class SecurityConfig {
                                                 "DELETE",
                                                 "OPTIONS"));
 
-                // -------------------------------------------------
+                // =====================================================
                 // HEADERS
-                // -------------------------------------------------
+                // =====================================================
 
                 configuration.setAllowedHeaders(
                                 List.of(
@@ -218,23 +193,23 @@ public class SecurityConfig {
                                                 "Content-Type",
                                                 "Accept"));
 
-                // -------------------------------------------------
+                // =====================================================
                 // HEADERS EXPUESTOS
-                // -------------------------------------------------
+                // =====================================================
 
                 configuration.setExposedHeaders(
                                 List.of(
                                                 "Authorization"));
 
-                // -------------------------------------------------
+                // =====================================================
                 // CREDENTIALS
-                // -------------------------------------------------
+                // =====================================================
 
                 configuration.setAllowCredentials(true);
 
-                // -------------------------------------------------
-                // REGISTRAR CONFIGURACIÓN
-                // -------------------------------------------------
+                // =====================================================
+                // REGISTRO
+                // =====================================================
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 

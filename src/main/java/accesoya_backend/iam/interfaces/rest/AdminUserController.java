@@ -37,7 +37,7 @@ public class AdminUserController {
         // =====================================================
 
         @GetMapping
-        @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         @Operation(summary = "Listar usuarios")
         public ResponseEntity<List<UserResponse>> getAllUsers() {
 
@@ -50,7 +50,7 @@ public class AdminUserController {
         // =====================================================
 
         @GetMapping("/{id}")
-        @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         public ResponseEntity<UserResponse> getUserById(
                         @PathVariable UUID id) {
 
@@ -63,16 +63,19 @@ public class AdminUserController {
         // =====================================================
 
         @PatchMapping("/{id}/role")
-        @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         public ResponseEntity<UserResponse> updateRole(
 
                         @PathVariable UUID id,
 
                         @Valid @RequestBody UpdateUserRoleRequest request,
 
-                        Authentication authentication) {
+                        Authentication authentication
+
+        ) {
 
                 return ResponseEntity.ok(
+
                                 userService.updateRole(
                                                 id,
                                                 request,
@@ -84,16 +87,19 @@ public class AdminUserController {
         // =====================================================
 
         @PatchMapping("/{id}/status")
-        @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasAuthority('ROLE_ADMIN')")
         public ResponseEntity<UserResponse> updateStatus(
 
                         @PathVariable UUID id,
 
                         @Valid @RequestBody UpdateUserStatusRequest request,
 
-                        Authentication authentication) {
+                        Authentication authentication
+
+        ) {
 
                 return ResponseEntity.ok(
+
                                 userService.updateStatus(
                                                 id,
                                                 request,
